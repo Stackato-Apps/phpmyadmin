@@ -1,0 +1,14 @@
+name: phpmyadmin 
+instances: 1
+framework:
+  type: php
+  runtime: php
+mem: 128
+services:
+  # an empty default database 
+  # comment out if desired and bind existing databases 
+  # using `stackato bind-service ...`
+  ${name}-db: mysql
+env:
+  # phpmyadmin login password. Use your Stackato username. 
+  PMA_PASSWORD: changeme
