@@ -10,5 +10,5 @@ services:
   # using `stackato bind-service ...`
   ${name}-db: mysql
 env:
-  # phpmyadmin login password. Use your Stackato username. 
+  PMA_USERNAME: stackato
   PMA_PASSWORD: changeme

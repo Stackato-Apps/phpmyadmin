@@ -1,3 +1,14 @@
+## Deploying to Stackato
+
+To deploy on Stackato, run:
+
+    stackato push -n
+
+To login, use the following credentials:
+
+    username: stackato
+    password: changeme
+
 phpMyAdmin - Readme
 ===================
 
