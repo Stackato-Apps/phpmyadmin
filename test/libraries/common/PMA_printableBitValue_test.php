@@ -1,19 +1,24 @@
 <?php
 /* vim: set expandtab sw=4 ts=4 sts=4: */
 /**
- * Test printableBitValue function
+ * Test PMA_Util::printableBitValue function
  *
  * @package PhpMyAdmin-test
- * @version $Id: PMA_printableBitValue_test.php
  * @group common.lib-tests
  */
 
 /*
  * Include to test.
  */
-require_once 'libraries/common.lib.php';
+require_once 'libraries/Util.class.php';
 
-class PMA_printableBitValue_test extends PHPUnit_Framework_TestCase
+/**
+ * Test PMA_Util::printableBitValue function
+ *
+ * @package PhpMyAdmin-test
+ * @group common.lib-tests
+ */
+class PMA_PrintableBitValueTest extends PHPUnit_Framework_TestCase
 {
 
     /**
@@ -21,20 +26,34 @@ class PMA_printableBitValue_test extends PHPUnit_Framework_TestCase
      *
      * @return array
      */
-    public function printableBitValueDataProvider() {
+    public function printableBitValueDataProvider()
+    {
         return array(
-            array('testtest', 64, '0111010001100101011100110111010001110100011001010111001101110100'),
-            array('test', 32, '01110100011001010111001101110100')
+            array(
+                '20131009',
+                64,
+                '0000000000000000000000000000000000000001001100110010110011000001'
+            ),
+            array('5', 32, '00000000000000000000000000000101')
         );
     }
 
     /**
      * test for generating string contains printable bit value of selected data
+     *
+     * @param number $a Value
+     * @param int    $b Length
+     * @param string $e Expected output
+     *
+     * @return void
+     *
      * @dataProvider printableBitValueDataProvider
      */
-
-    public function testPrintableBitValue($a, $b, $e) {
-        $this->assertEquals($e, PMA_printable_bit_value($a, $b));
+    public function testPrintableBitValue($a, $b, $e)
+    {
+        $this->assertEquals(
+            $e, PMA_Util::printableBitValue($a, $b)
+        );
     }
 }
 ?>

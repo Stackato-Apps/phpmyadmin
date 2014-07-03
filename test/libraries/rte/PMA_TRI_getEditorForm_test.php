@@ -5,49 +5,46 @@
  *
  * @package PhpMyAdmin-test
  */
+
 require_once 'libraries/php-gettext/gettext.inc';
 require_once 'libraries/url_generating.lib.php';
-require_once 'libraries/common.lib.php';
+require_once 'libraries/Util.class.php';
+require_once 'libraries/database_interface.inc.php';
+require_once 'libraries/Tracker.class.php';
 /*
  * Include to test.
  */
 require_once 'libraries/rte/rte_triggers.lib.php';
 
-class PMA_TRI_getEditorForm_test extends PHPUnit_Framework_TestCase
+/**
+ * Test for generating trigger editor
+ *
+ * @package PhpMyAdmin-test
+ */
+class PMA_TRI_GetEditorForm_Test extends PHPUnit_Framework_TestCase
 {
+    /**
+     * Set up
+     *
+     * @return void
+     */
     public function setUp()
     {
-        if (! function_exists('PMA_DBI_fetch_result')) {
-            function PMA_DBI_fetch_result($query)
-            {
-                return array('table1', 'table`2');
-            }
-        }
-        $GLOBALS['tear_down']['token'] = false;
-        $GLOBALS['tear_down']['server'] = false;
-        if (! isset($_SESSION[' PMA_token '])) {
-            $_SESSION[' PMA_token '] = '';
-            $GLOBALS['tear_down']['token'] = true;
-        }
-        if (! isset($GLOBALS['cfg']['ServerDefault'])) {
-            $GLOBALS['cfg']['ServerDefault'] = '';
-            $GLOBALS['tear_down']['server'] = true;
-        }
+        $GLOBALS['cfg']['ServerDefault'] = '';
+        $GLOBALS['db'] = 'pma_test';
     }
 
-    public function tearDown()
-    {
-        if ($GLOBALS['tear_down']['token']) {
-            unset($_SESSION[' PMA_token ']);
-        }
-        if ($GLOBALS['tear_down']['server']) {
-            unset($GLOBALS['cfg']['ServerDefault']);
-        }
-        unset($GLOBALS['tear_down']);
-    }
 
     /**
+     * Test for PMA_TRI_getEditorForm
+     *
+     * @param string $data    Data for trigger
+     * @param array  $matcher Matcher
+     *
+     * @return void
+     *
      * @dataProvider provider_add
+     * @group medium
      */
     public function testgetEditorForm_add($data, $matcher)
     {
@@ -56,6 +53,11 @@ class PMA_TRI_getEditorForm_test extends PHPUnit_Framework_TestCase
         $this->assertTag($matcher, PMA_TRI_getEditorForm('add', $data), '', false);
     }
 
+    /**
+     * Provider for testgetEditorForm_add
+     *
+     * @return array
+     */
     public function provider_add()
     {
         $data = array(
@@ -145,7 +147,15 @@ class PMA_TRI_getEditorForm_test extends PHPUnit_Framework_TestCase
     }
 
     /**
+     * Test for PMA_TRI_getEditorForm
+     *
+     * @param string $data    Data for trigger
+     * @param array  $matcher Matcher
+     *
+     * @return void
+     *
      * @dataProvider provider_edit
+     * @group medium
      */
     public function testgetEditorForm_edit($data, $matcher)
     {
@@ -154,6 +164,11 @@ class PMA_TRI_getEditorForm_test extends PHPUnit_Framework_TestCase
         $this->assertTag($matcher, PMA_TRI_getEditorForm('edit', $data), '', false);
     }
 
+    /**
+     * Provider for testgetEditorForm_edit
+     *
+     * @return array
+     */
     public function provider_edit()
     {
         $data = array(
@@ -243,6 +258,13 @@ class PMA_TRI_getEditorForm_test extends PHPUnit_Framework_TestCase
     }
 
     /**
+     * Test for PMA_TRI_getEditorForm
+     *
+     * @param string $data    Data for trigger
+     * @param array  $matcher Matcher
+     *
+     * @return void
+     *
      * @dataProvider provider_ajax
      */
     public function testgetEditorForm_ajax($data, $matcher)
@@ -252,6 +274,11 @@ class PMA_TRI_getEditorForm_test extends PHPUnit_Framework_TestCase
         $this->assertTag($matcher, PMA_TRI_getEditorForm('edit', $data), '', false);
     }
 
+    /**
+     * Provider for testgetEditorForm_ajax
+     *
+     * @return array
+     */
     public function provider_ajax()
     {
         $data = array(

@@ -10,35 +10,79 @@
 /*
  * Include to test.
  */
+require_once 'libraries/vendor_config.php';
 require_once 'libraries/core.lib.php';
+require_once 'libraries/select_lang.lib.php';
+require_once 'libraries/Config.class.php';
+require_once 'libraries/Theme.class.php';
+require_once 'libraries/Util.class.php';
+require_once 'libraries/js_escape.lib.php';
+require_once 'libraries/sanitizing.lib.php';
 
-class PMA_warnMissingExtension_test extends PHPUnit_Framework_TestCase
+/**
+ * Test for PMA_warnMissingExtension() from libraries/core.lib.php
+ * PMA_warnMissingExtension warns or fails on missing extension.
+ *
+ * @package PhpMyAdmin-test
+ */
+class PMA_WarnMissingExtension_Test extends PHPUnit_Framework_TestCase
 {
+    /**
+     * Set up
+     *
+     * @return void
+     */
+    public function setUp()
+    {
+        $GLOBALS['PMA_Config'] = new PMA_Config();
+        $GLOBALS['PMA_Config']->enableBc();
+        $GLOBALS['cfg']['Server'] = array(
+            'host' => 'host',
+            'verbose' => 'verbose',
+        );
+        $GLOBALS['cfg']['OBGzip'] = false;
+        $_SESSION['PMA_Theme'] = new PMA_Theme();
+        $GLOBALS['pmaThemeImage'] = 'theme/';
+        $GLOBALS['pmaThemePath'] = $_SESSION['PMA_Theme']->getPath();
+        $GLOBALS['server'] = 1;
+        $GLOBALS['db'] = '';
+        $GLOBALS['table'] = '';
 
-    function testMissingExtention(){
-        $ext = 'php_ext';
-        $this->setExpectedException('PHPUnit_Framework_Error',
-                            'The [a@'.PMA_getPHPDocLink('book.' . $ext . '.php').'@Documentation][em]'.$ext.'[/em][/a] extension is missing. Please check your PHP configuration.');
-        PMA_warnMissingExtension($ext);
+        include_once './libraries/Error_Handler.class.php';
+        $GLOBALS['error_handler'] = new PMA_Error_Handler();
     }
 
-    function testMissingExtentionFatal(){
+    /**
+     * Test for PMA_warnMissingExtension
+     *
+     * @return void
+     */
+    function testMissingExtensionFatal()
+    {
         $ext = 'php_ext';
-        $warn = 'The <a href="' . PMA_getPHPDocLink('book.' . $ext . '.php') . '" target="Documentation"><em>'.$ext.'</em></a> extension is missing. Please check your PHP configuration.';
+        $warn = 'The <a href="' . PMA_getPHPDocLink('book.' . $ext . '.php')
+            . '" target="Documentation"><em>' . $ext
+            . '</em></a> extension is missing. Please check your PHP configuration.';
 
-        ob_start();
+        $this->expectOutputRegex('@' . preg_quote($warn) . '@');
+
         PMA_warnMissingExtension($ext, true);
-        $printed = ob_get_contents();
-        ob_end_clean();
-
-        $this->assertGreaterThan(0, strpos($printed, $warn));
     }
 
-    function testMissingExtentionFatalWithExtra(){
+    /**
+     * Test for PMA_warnMissingExtension
+     *
+     * @return void
+     */
+    function testMissingExtensionFatalWithExtra()
+    {
         $ext = 'php_ext';
         $extra = 'Appended Extra String';
 
-        $warn = 'The <a href="' . PMA_getPHPDocLink('book.' . $ext . '.php') . '" target="Documentation"><em>'.$ext.'</em></a> extension is missing. Please check your PHP configuration.'.' '.$extra;
+        $warn = 'The <a href="' . PMA_getPHPDocLink('book.' . $ext . '.php')
+            . '" target="Documentation"><em>' . $ext
+            . '</em></a> extension is missing. Please check your PHP configuration.'
+            . ' ' . $extra;
 
         ob_start();
         PMA_warnMissingExtension($ext, true, $extra);
@@ -46,14 +90,5 @@ class PMA_warnMissingExtension_test extends PHPUnit_Framework_TestCase
         ob_end_clean();
 
         $this->assertGreaterThan(0, strpos($printed, $warn));
-    }
-
-    function testMissingExtentionWithExtra(){
-        $ext = 'php_ext';
-        $extra = 'Appended Extra String';
-        $this->setExpectedException('PHPUnit_Framework_Error',
-                            'The [a@'.PMA_getPHPDocLink('book.' . $ext . '.php').'@Documentation][em]'.$ext.'[/em][/a] extension is missing. Please check your PHP configuration.'.' '.$extra);
-        PMA_warnMissingExtension($ext, false, $extra);
-        $this->assertTrue(true);
     }
 }

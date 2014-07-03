@@ -11,10 +11,20 @@
  */
 require_once 'libraries/js_escape.lib.php';
 
-class PMA_escapeJsString_test extends PHPUnit_Framework_TestCase
+/**
+ * Test for javascript escaping.
+ *
+ * @package PhpMyAdmin-test
+ */
+class PMA_EscapeJsString_Test extends PHPUnit_Framework_TestCase
 {
     /**
      * PMA_escapeJsString tests
+     *
+     * @param string $target expected output
+     * @param string $source string to be escaped
+     *
+     * @return void
      * @dataProvider escapeDataProvider
      */
     public function testEscape($target, $source)
@@ -22,7 +32,13 @@ class PMA_escapeJsString_test extends PHPUnit_Framework_TestCase
         $this->assertEquals($target, PMA_escapeJsString($source));
     }
 
-    public function escapeDataProvider() {
+    /**
+     * Data provider for testEscape
+     *
+     * @return array data for testEscape test case
+     */
+    public function escapeDataProvider()
+    {
         return array(
             array('\\\';', '\';'),
             array('\r\n\\\'<scrIpt></\' + \'script>', "\r\n'<scrIpt></sCRIPT>"),

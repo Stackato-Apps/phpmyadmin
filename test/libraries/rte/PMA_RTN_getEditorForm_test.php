@@ -5,58 +5,53 @@
  *
  * @package PhpMyAdmin-test
  */
-require_once 'libraries/common.lib.php';
+
+$GLOBALS['server'] = 0;
+require_once 'libraries/Util.class.php';
 require_once 'libraries/php-gettext/gettext.inc';
 require_once 'libraries/url_generating.lib.php';
+require_once './libraries/Types.class.php';
+require_once 'libraries/Theme.class.php';
+require_once 'libraries/database_interface.inc.php';
+require_once 'libraries/Tracker.class.php';
+require_once 'libraries/mysql_charsets.inc.php';
 /*
  * Include to test.
  */
 require_once 'libraries/rte/rte_routines.lib.php';
 
-class PMA_RTN_getEditorForm_test extends PHPUnit_Framework_TestCase
+/**
+ * Test for generating routine editor
+ *
+ * @package PhpMyAdmin-test
+ */
+class PMA_RTN_GetEditorForm_Test extends PHPUnit_Framework_TestCase
 {
+    /**
+     * Set up
+     *
+     * @return void
+     */
     public function setUp()
     {
         global $cfg;
 
         $cfg['ShowFunctionFields'] = false;
-        include 'libraries/data_mysql.inc.php';
+        $GLOBALS['server'] = 0;
+        $cfg['ServerDefault'] = 1;
 
-        if (! function_exists('PMA_generateCharsetDropdownBox')) {
-            function PMA_generateCharsetDropdownBox() {}
-        }
-        if (! defined('PMA_CSDROPDOWN_CHARSET')) {
-            define('PMA_CSDROPDOWN_CHARSET', '');
-        }
-        if (! function_exists('PMA_DBI_get_tables')) {
-            function PMA_DBI_get_tables($db)
-            {
-                return array('table1', 'table`2');
-            }
-        }
-        $GLOBALS['tear_down']['token'] = false;
-        $GLOBALS['tear_down']['server'] = false;
-        if (! isset($_SESSION[' PMA_token '])) {
-            $_SESSION[' PMA_token '] = '';
-            $GLOBALS['tear_down']['token'] = true;
-        }
-        if (! isset($GLOBALS['cfg']['ServerDefault'])) {
-            $GLOBALS['cfg']['ServerDefault'] = '';
-            $GLOBALS['tear_down']['server'] = true;
-        }
+        $GLOBALS['PMA_Types'] = new PMA_Types_MySQL();
+        $_SESSION['PMA_Theme'] = new PMA_Theme();
+        $GLOBALS['pmaThemePath'] = $_SESSION['PMA_Theme']->getPath();
+        $GLOBALS['pmaThemeImage'] = 'theme/';
+
     }
 
-    public function tearDown()
-    {
-        if ($GLOBALS['tear_down']['token']) {
-            unset($_SESSION[' PMA_token ']);
-        }
-        if ($GLOBALS['tear_down']['server']) {
-            unset($GLOBALS['cfg']['ServerDefault']);
-        }
-        unset($GLOBALS['tear_down']);
-    }
-
+    /**
+     * Test for PMA_RTN_getParameterRow
+     *
+     * @return void
+     */
     public function testgetParameterRow_empty()
     {
         $GLOBALS['is_ajax_request'] = false;
@@ -65,6 +60,14 @@ class PMA_RTN_getEditorForm_test extends PHPUnit_Framework_TestCase
     }
 
     /**
+     * Test for PMA_RTN_getParameterRow
+     *
+     * @param array $data    Data for routine
+     * @param mixed $index   Index
+     * @param array $matcher Matcher
+     *
+     * @return void
+     *
      * @depends testgetParameterRow_empty
      * @dataProvider provider_row
      */
@@ -75,6 +78,11 @@ class PMA_RTN_getEditorForm_test extends PHPUnit_Framework_TestCase
         $this->assertTag($matcher, PMA_RTN_getParameterRow($data, $index), false);
     }
 
+    /**
+     * Data provider for testgetParameterRow
+     *
+     * @return array
+     */
     public function provider_row()
     {
         $data = array(
@@ -168,6 +176,13 @@ class PMA_RTN_getEditorForm_test extends PHPUnit_Framework_TestCase
     }
 
     /**
+     * Test for PMA_RTN_getParameterRow
+     *
+     * @param array $data    Data for routine
+     * @param array $matcher Matcher
+     *
+     * @return void
+     *
      * @depends testgetParameterRow
      * @dataProvider provider_row_ajax
      */
@@ -178,6 +193,11 @@ class PMA_RTN_getEditorForm_test extends PHPUnit_Framework_TestCase
         $this->assertTag($matcher, PMA_RTN_getParameterRow($data), false);
     }
 
+    /**
+     * Data provider for testgetParameterRow_ajax
+     *
+     * @return array
+     */
     public function provider_row_ajax()
     {
         $data = array(
@@ -265,6 +285,13 @@ class PMA_RTN_getEditorForm_test extends PHPUnit_Framework_TestCase
     }
 
     /**
+     * Test for PMA_RTN_getEditorForm
+     *
+     * @param array $data    Data for routine
+     * @param array $matcher Matcher
+     *
+     * @return void
+     *
      * @depends testgetParameterRow_ajax
      * @dataProvider provider_editor_1
      */
@@ -275,6 +302,11 @@ class PMA_RTN_getEditorForm_test extends PHPUnit_Framework_TestCase
         $this->assertTag($matcher, PMA_RTN_getEditorForm('add', '', $data), false);
     }
 
+    /**
+     * Data provider for testgetEditorForm_1
+     *
+     * @return array
+     */
     public function provider_editor_1()
     {
         $data = array(
@@ -455,6 +487,13 @@ class PMA_RTN_getEditorForm_test extends PHPUnit_Framework_TestCase
     }
 
     /**
+     * Test for PMA_RTN_getEditorForm
+     *
+     * @param array $data    Data for routine
+     * @param array $matcher Matcher
+     *
+     * @return void
+     *
      * @depends testgetParameterRow_ajax
      * @dataProvider provider_editor_2
      */
@@ -465,6 +504,11 @@ class PMA_RTN_getEditorForm_test extends PHPUnit_Framework_TestCase
         $this->assertTag($matcher, PMA_RTN_getEditorForm('edit', 'change', $data), false);
     }
 
+    /**
+     * Data provider for testgetEditorForm_2
+     *
+     * @return array
+     */
     public function provider_editor_2()
     {
         $data = array(
@@ -646,6 +690,13 @@ class PMA_RTN_getEditorForm_test extends PHPUnit_Framework_TestCase
     }
 
     /**
+     * Test for PMA_RTN_getEditorForm
+     *
+     * @param array $data    Data for routine
+     * @param array $matcher Matcher
+     *
+     * @return void
+     *
      * @depends testgetParameterRow_ajax
      * @dataProvider provider_editor_3
      */
@@ -653,9 +704,18 @@ class PMA_RTN_getEditorForm_test extends PHPUnit_Framework_TestCase
     {
         $GLOBALS['is_ajax_request'] = true;
         PMA_RTN_setGlobals();
-        $this->assertTag($matcher, PMA_RTN_getEditorForm('edit', 'remove', $data), false);
+        $this->assertTag(
+            $matcher,
+            PMA_RTN_getEditorForm('edit', 'remove', $data),
+            false
+        );
     }
 
+    /**
+     * Data provider for testgetEditorForm_3
+     *
+     * @return array
+     */
     public function provider_editor_3()
     {
         $data = array(
@@ -834,6 +894,13 @@ class PMA_RTN_getEditorForm_test extends PHPUnit_Framework_TestCase
     }
 
     /**
+     * Test for PMA_RTN_getEditorForm
+     *
+     * @param array $data    Data for routine
+     * @param array $matcher Matcher
+     *
+     * @return void
+     *
      * @depends testgetParameterRow_ajax
      * @dataProvider provider_editor_4
      */
@@ -841,9 +908,18 @@ class PMA_RTN_getEditorForm_test extends PHPUnit_Framework_TestCase
     {
         $GLOBALS['is_ajax_request'] = false;
         PMA_RTN_setGlobals();
-        $this->assertTag($matcher, PMA_RTN_getEditorForm('edit', 'change', $data), false);
+        $this->assertTag(
+            $matcher,
+            PMA_RTN_getEditorForm('edit', 'change', $data),
+            false
+        );
     }
 
+    /**
+     * Data provider for testgetEditorForm_4
+     *
+     * @return array
+     */
     public function provider_editor_4()
     {
         $data = array(

@@ -5,74 +5,53 @@
  *
  * @package PhpMyAdmin-test
  */
-require_once 'libraries/common.lib.php';
+
+$GLOBALS['server'] = 0;
+require_once 'libraries/Util.class.php';
 require_once 'libraries/sqlparser.lib.php';
 require_once 'libraries/php-gettext/gettext.inc';
 require_once 'libraries/url_generating.lib.php';
+require_once './libraries/Types.class.php';
+require_once 'libraries/database_interface.inc.php';
+require_once 'libraries/Tracker.class.php';
 /*
  * Include to test.
  */
 require_once 'libraries/rte/rte_routines.lib.php';
 
-class PMA_RTN_getExecuteForm_test extends PHPUnit_Framework_TestCase
+/**
+ * Test for generating routine execution dialog
+ *
+ * @package PhpMyAdmin-test
+ */
+class PMA_RTN_GetExecuteForm_Test extends PHPUnit_Framework_TestCase
 {
+    /**
+     * Set up
+     *
+     * @return void
+     */
     public function setUp()
     {
         global $cfg;
-
-        if (! defined('PMA_MYSQL_INT_VERSION')) {
-            define('PMA_MYSQL_INT_VERSION', 51000);
-        }
-
-        if (! function_exists('PMA_generateCharsetDropdownBox')) {
-            function PMA_generateCharsetDropdownBox() {}
-        }
-        if (! defined('PMA_CSDROPDOWN_CHARSET')) {
-            define('PMA_CSDROPDOWN_CHARSET', '');
-        }
-        if (! function_exists('PMA_DBI_get_tables')) {
-            function PMA_DBI_get_tables($db)
-            {
-                return array('table1', 'table`2');
-            }
-        }
-        $GLOBALS['tear_down']['token'] = false;
-        $GLOBALS['tear_down']['server'] = false;
-        $GLOBALS['tear_down']['default'] = false;
-        if (! isset($_SESSION[' PMA_token '])) {
-            $_SESSION[' PMA_token '] = '';
-            $GLOBALS['tear_down']['token'] = true;
-        }
-        if (! isset($GLOBALS['cfg']['ServerDefault'])) {
-            $GLOBALS['cfg']['ServerDefault'] = '';
-            $GLOBALS['tear_down']['server'] = true;
-        }
+        $GLOBALS['PMA_Types'] = new PMA_Types_MySQL();
+        $GLOBALS['server'] = 0;
+        $cfg['ServerDefault'] = 1;
+        $GLOBALS['cfg']['ServerDefault'] = '';
         $cfg['ShowFunctionFields'] = true;
-        if (! isset($GLOBALS['cfg']['DefaultFunctions'])) {
-            $cfg['DefaultFunctions']['FUNC_NUMBER'] = '';
-            $cfg['DefaultFunctions']['FUNC_DATE'] = '';
-            $cfg['DefaultFunctions']['FUNC_SPATIAL'] = 'GeomFromText';
-            $GLOBALS['tear_down']['default'] = true;
-        }
-        include 'libraries/data_mysql.inc.php';
+        $cfg['DefaultFunctions']['FUNC_NUMBER'] = '';
+        $cfg['DefaultFunctions']['FUNC_DATE'] = '';
+        $cfg['DefaultFunctions']['FUNC_SPATIAL'] = 'GeomFromText';
     }
-
-    public function tearDown()
-    {
-        if ($GLOBALS['tear_down']['token']) {
-            unset($_SESSION[' PMA_token ']);
-        }
-        if ($GLOBALS['tear_down']['server']) {
-            unset($GLOBALS['cfg']['ServerDefault']);
-        }
-        if ($GLOBALS['tear_down']['default']) {
-            unset($GLOBALS['cfg']['DefaultFunctions']);
-        }
-        unset($GLOBALS['tear_down']);
-    }
-
 
     /**
+     * Test for PMA_RTN_getExecuteForm
+     *
+     * @param array $data    Data for routine
+     * @param array $matcher Matcher
+     *
+     * @return void
+     *
      * @dataProvider provider_1
      */
     public function testgetExecuteForm_1($data, $matcher)
@@ -82,6 +61,11 @@ class PMA_RTN_getExecuteForm_test extends PHPUnit_Framework_TestCase
         $this->assertTag($matcher, PMA_RTN_getExecuteForm($data), false);
     }
 
+    /**
+     * Data provider for testgetExecuteForm_1
+     *
+     * @return array
+     */
     public function provider_1()
     {
         $data = array(
@@ -94,12 +78,54 @@ class PMA_RTN_getExecuteForm_test extends PHPUnit_Framework_TestCase
             'item_definer'              => '',
             'item_type'                 => 'PROCEDURE',
             'item_num_params'           => 6,
-            'item_param_dir'            => array(0 => 'IN',   1 => 'OUT',     2 => 'IN',       3 => 'IN',       4 => 'IN',      5 => 'IN'),
-            'item_param_name'           => array(0 => 'foo',  1 => 'foa',     2 => 'fob',      3 => 'foc',      4 => 'fod',     5 => 'foe'),
-            'item_param_type'           => array(0 => 'DATE', 1 => 'VARCHAR', 2 => 'DATETIME', 3 => 'GEOMETRY', 4 => 'ENUM',    5 => 'SET'),
-            'item_param_length'         => array(0 => '',     1 => '22',      2 => '',         3 => '',         4 => "'a','b'", 5 => "'a','b'"),
-            'item_param_opts_num'       => array(0 => '',     1 => '',        2 => '',         3 => '',         4 => '',        5 => ''),
-            'item_param_opts_text'      => array(0 => '',     1 => 'utf8',    2 => '',         3 => '',         4 => '',        5 => ''),
+            'item_param_dir'            => array(
+                0 => 'IN',
+                1 => 'OUT',
+                2 => 'IN',
+                3 => 'IN',
+                4 => 'IN',
+                5 => 'IN'
+            ),
+            'item_param_name'           => array(
+                0 => 'foo',
+                1 => 'foa',
+                2 => 'fob',
+                3 => 'foc',
+                4 => 'fod',
+                5 => 'foe'
+            ),
+            'item_param_type'           => array(
+                0 => 'DATE',
+                1 => 'VARCHAR',
+                2 => 'DATETIME',
+                3 => 'GEOMETRY',
+                4 => 'ENUM',
+                5 => 'SET'
+            ),
+            'item_param_length'         => array(
+                0 => '',
+                1 => '22',
+                2 => '',
+                3 => '',
+                4 => "'a','b'",
+                5 => "'a','b'"
+            ),
+            'item_param_opts_num'       => array(
+                0 => '',
+                1 => '',
+                2 => '',
+                3 => '',
+                4 => '',
+                5 => ''
+            ),
+            'item_param_opts_text'      => array(
+                0 => '',
+                1 => 'utf8',
+                2 => '',
+                3 => '',
+                4 => '',
+                5 => ''
+            ),
             'item_returntype'           => '',
             'item_isdeterministic'      => '',
             'item_securitytype_definer' => '',
@@ -186,6 +212,13 @@ class PMA_RTN_getExecuteForm_test extends PHPUnit_Framework_TestCase
     }
 
     /**
+     * Test for PMA_RTN_getExecuteForm
+     *
+     * @param array $data    Data for routine
+     * @param array $matcher Matcher
+     *
+     * @return void
+     *
      * @dataProvider provider_2
      */
     public function testgetExecuteForm_2($data, $matcher)
@@ -195,6 +228,11 @@ class PMA_RTN_getExecuteForm_test extends PHPUnit_Framework_TestCase
         $this->assertTag($matcher, PMA_RTN_getExecuteForm($data), false);
     }
 
+    /**
+     * Data provider for testgetExecuteForm_2
+     *
+     * @return array
+     */
     public function provider_2()
     {
         $data = array(
@@ -207,12 +245,54 @@ class PMA_RTN_getExecuteForm_test extends PHPUnit_Framework_TestCase
             'item_definer'              => '',
             'item_type'                 => 'PROCEDURE',
             'item_num_params'           => 6,
-            'item_param_dir'            => array(0 => 'IN',   1 => 'OUT',     2 => 'IN',       3 => 'IN',       4 => 'IN',      5 => 'IN'),
-            'item_param_name'           => array(0 => 'foo',  1 => 'foa',     2 => 'fob',      3 => 'foc',      4 => 'fod',     5 => 'foe'),
-            'item_param_type'           => array(0 => 'DATE', 1 => 'VARCHAR', 2 => 'DATETIME', 3 => 'GEOMETRY', 4 => 'ENUM',    5 => 'SET'),
-            'item_param_length'         => array(0 => '',     1 => '22',      2 => '',         3 => '',         4 => "'a','b'", 5 => "'a','b'"),
-            'item_param_opts_num'       => array(0 => '',     1 => '',        2 => '',         3 => '',         4 => '',        5 => ''),
-            'item_param_opts_text'      => array(0 => '',     1 => 'utf8',    2 => '',         3 => '',         4 => '',        5 => ''),
+            'item_param_dir'            => array(
+                0 => 'IN',
+                1 => 'OUT',
+                2 => 'IN',
+                3 => 'IN',
+                4 => 'IN',
+                5 => 'IN'
+            ),
+            'item_param_name'           => array(
+                0 => 'foo',
+                1 => 'foa',
+                2 => 'fob',
+                3 => 'foc',
+                4 => 'fod',
+                5 => 'foe'
+            ),
+            'item_param_type'           => array(
+                0 => 'DATE',
+                1 => 'VARCHAR',
+                2 => 'DATETIME',
+                3 => 'GEOMETRY',
+                4 => 'ENUM',
+                5 => 'SET'
+            ),
+            'item_param_length'         => array(
+                0 => '',
+                1 => '22',
+                2 => '',
+                3 => '',
+                4 => "'a','b'",
+                5 => "'a','b'"
+            ),
+            'item_param_opts_num'       => array(
+                0 => '',
+                1 => '',
+                2 => '',
+                3 => '',
+                4 => '',
+                5 => ''
+            ),
+            'item_param_opts_text'      => array(
+                0 => '',
+                1 => 'utf8',
+                2 => '',
+                3 => '',
+                4 => '',
+                5 => ''
+            ),
             'item_returntype'           => '',
             'item_isdeterministic'      => '',
             'item_securitytype_definer' => '',

@@ -1,311 +1,339 @@
 /* vim: set expandtab sw=4 ts=4 sts=4: */
 
-var chart_xaxis_idx = -1;
-var chart_series;
-var chart_series_index = -1;
+var chart_data = {};
 var temp_chart_title;
+
 var currentChart = null;
-var chart_data = null;
-var nonJqplotSettings = null;
 var currentSettings = null;
 
+function extractDate(dateString) {
+    var matches, match;
+    var dateTimeRegExp = /[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}/;
+    var dateRegExp = /[0-9]{4}-[0-9]{2}-[0-9]{2}/;
 
-$(document).ready(function() {
-    chart_series = 'columns';
-    chart_xaxis_idx = $('select[name="chartXAxis"]').attr('value');
+    matches = dateTimeRegExp.exec(dateString);
+    if (matches !== null && matches.length > 0) {
+        match = matches[0];
+        return new Date(match.substr(0, 4), match.substr(5, 2), match.substr(8, 2), match.substr(11, 2), match.substr(14, 2), match.substr(17, 2));
+    } else {
+        matches = dateRegExp.exec(dateString);
+        if (matches !== null && matches.length > 0) {
+            match = matches[0];
+            return new Date(match.substr(0, 4), match.substr(5, 2), match.substr(8, 2));
+        }
+    }
+    return null;
+}
+
+function PMA_queryChart(data, columnNames, settings) {
+    if ($('#querychart').length === 0) {
+        return;
+    }
+
+    var jqPlotSettings = {
+        title : {
+            text : settings.title,
+            escapeHtml: true
+        },
+        grid : {
+            drawBorder : false,
+            shadow : false,
+            background : 'rgba(0,0,0,0)'
+        },
+        legend : {
+            show : true,
+            placement : 'outsideGrid',
+            location : 'e'
+        },
+        axes : {
+            xaxis : {
+                label : settings.xaxisLabel
+            },
+            yaxis : {
+                label : settings.yaxisLabel
+            }
+        },
+        stackSeries : settings.stackSeries
+    };
+
+    // create the chart
+    var factory = new JQPlotChartFactory();
+    var chart = factory.createChart(settings.type, "querychart");
+
+    // create the data table and add columns
+    var dataTable = new DataTable();
+    if (settings.type == 'timeline') {
+        dataTable.addColumn(ColumnType.DATE, columnNames[settings.mainAxis]);
+    } else if (settings.type == 'scatter') {
+        dataTable.addColumn(ColumnType.NUMBER, columnNames[settings.mainAxis]);
+    } else {
+        dataTable.addColumn(ColumnType.STRING, columnNames[settings.mainAxis]);
+    }
+    $.each(settings.selectedSeries, function (index, element) {
+        dataTable.addColumn(ColumnType.NUMBER, columnNames[element]);
+    });
+
+    // set data to the data table
+    var columnsToExtract = [ settings.mainAxis ];
+    $.each(settings.selectedSeries, function (index, element) {
+        columnsToExtract.push(element);
+    });
+    var values = [], newRow, row, col;
+    for (var i = 0; i < data.length; i++) {
+        row = data[i];
+        newRow = [];
+        for (var j = 0; j < columnsToExtract.length; j++) {
+            col = columnNames[columnsToExtract[j]];
+            if (j === 0) {
+                if (settings.type == 'timeline') { // first column is date type
+                    newRow.push(extractDate(row[col]));
+                } else if (settings.type == 'scatter') {
+                    newRow.push(parseFloat(row[col]));
+                } else { // first column is string type
+                    newRow.push(row[col]);
+                }
+            } else { // subsequent columns are of type, number
+                newRow.push(parseFloat(row[col]));
+            }
+        }
+        values.push(newRow);
+    }
+    dataTable.setData(values);
+
+    // draw the chart and return the chart object
+    chart.draw(dataTable, jqPlotSettings);
+    return chart;
+}
+
+function drawChart() {
+    currentSettings.width = $('#resizer').width() - 20;
+    currentSettings.height = $('#resizer').height() - 20;
+
+    // TODO: a better way using .redraw() ?
+    if (currentChart !== null) {
+        currentChart.destroy();
+    }
+
+    var columnNames = [];
+    $('select[name="chartXAxis"] option').each(function () {
+        columnNames.push($(this).text());
+    });
+    try {
+        currentChart = PMA_queryChart(chart_data, columnNames, currentSettings);
+    } catch (err) {
+        PMA_ajaxShowMessage(err.message, false);
+    }
+}
+
+function getSelectedSeries() {
+    var val = $('select[name="chartSeries"]').val() || [];
+    var ret = [];
+    $.each(val, function (i, v) {
+        ret.push(parseInt(v, 10));
+    });
+    return ret;
+}
+
+/**
+ * Unbind all event handlers before tearing down a page
+ */
+AJAX.registerTeardown('tbl_chart.js', function () {
+    $('input[name="chartType"]').unbind('click');
+    $('input[name="barStacked"]').unbind('click');
+    $('input[name="chartTitle"]').unbind('focus').unbind('keyup').unbind('blur');
+    $('select[name="chartXAxis"]').unbind('change');
+    $('select[name="chartSeries"]').unbind('change');
+    $('input[name="xaxis_label"]').unbind('keyup');
+    $('input[name="yaxis_label"]').unbind('keyup');
+    $('#resizer').unbind('resizestop');
+});
+
+AJAX.registerOnload('tbl_chart.js', function () {
 
     // from jQuery UI
     $('#resizer').resizable({
-        minHeight:240,
-        minWidth:300
-    });
+        minHeight: 240,
+        minWidth: 300
+    })
+    .width($('#div_view_options').width() - 50);
 
-    $('#resizer').bind('resizestop', function(event,ui) {
+    $('#resizer').bind('resizestop', function (event, ui) {
         // make room so that the handle will still appear
         $('#querychart').height($('#resizer').height() * 0.96);
         $('#querychart').width($('#resizer').width() * 0.96);
-        currentChart.replot( {resetAxes: true})
+        currentChart.redraw({
+            resetAxes : true
+        });
     });
-
-    nonJqplotSettings = {
-        chart: {
-            type: 'line',
-            width: $('#resizer').width() - 20,
-            height: $('#resizer').height() - 20
-        }
-    };
 
     currentSettings = {
-        grid: {
-            drawBorder: false,
-            shadow: false,
-            background: 'rgba(0,0,0,0)'
-        },
-        axes: {
-            xaxis: {
-                label: $('input[name="xaxis_label"]').val(),
-                labelRenderer: $.jqplot.CanvasAxisLabelRenderer
-            },
-            yaxis: {
-                label: $('input[name="yaxis_label"]').val(),
-                labelRenderer: $.jqplot.CanvasAxisLabelRenderer
-            }
-        },
-        title: {
-            text: $('input[name="chartTitle"]').attr('value')
-            //margin:20
-        },
-        legend: {
-            show: true,
-            placement: 'outsideGrid',
-            location: 'se'
-        }
+        type : 'line',
+        width : $('#resizer').width() - 20,
+        height : $('#resizer').height() - 20,
+        xaxisLabel : $('input[name="xaxis_label"]').val(),
+        yaxisLabel : $('input[name="yaxis_label"]').val(),
+        title : $('input[name="chartTitle"]').val(),
+        stackSeries : false,
+        mainAxis : parseInt($('select[name="chartXAxis"]').val(), 10),
+        selectedSeries : getSelectedSeries()
     };
 
-    $('#querychart').html('');
-
-    $('input[name="chartType"]').click(function() {
-        nonJqplotSettings.chart.type = $(this).attr('value');
-
-        drawChart();
-
-        if ($(this).attr('value') == 'bar' || $(this).attr('value') == 'column')
+    // handle chart type changes
+    $('input[name="chartType"]').click(function () {
+        var type = currentSettings.type = $(this).val();
+        if (type == 'bar' || type == 'column' || type == 'area') {
             $('span.barStacked').show();
-        else
-            $('span.barStacked').hide();
-    });
-
-    $('input[name="barStacked"]').click(function() {
-        if(this.checked) {
-            $.extend(true,currentSettings,{ stackSeries: true });
         } else {
-            $.extend(true,currentSettings,{ stackSeries: false });
+            $('input[name="barStacked"]').attr('checked', false);
+            $.extend(true, currentSettings, {stackSeries : false});
+            $('span.barStacked').hide();
         }
         drawChart();
     });
 
-    $('input[name="chartTitle"]').focus(function() {
-        temp_chart_title = $(this).val();
+    // handle stacking for bar, column and area charts
+    $('input[name="barStacked"]').click(function () {
+        if ($(this).is(':checked')) {
+            $.extend(true, currentSettings, {stackSeries : true});
+        } else {
+            $.extend(true, currentSettings, {stackSeries : false});
+        }
+        drawChart();
     });
-    $('input[name="chartTitle"]').keyup(function() {
-        var title = $(this).attr('value');
-        if (title.length == 0) {
+
+    // handle changes in chart title
+    $('input[name="chartTitle"]')
+    .focus(function () {
+        temp_chart_title = $(this).val();
+    })
+    .keyup(function () {
+        var title = $(this).val();
+        if (title.length === 0) {
             title = ' ';
         }
         currentSettings.title = $('input[name="chartTitle"]').val();
         drawChart();
-    });
-    $('input[name="chartTitle"]').blur(function() {
+    })
+    .blur(function () {
         if ($(this).val() != temp_chart_title) {
             drawChart();
         }
     });
 
-    $('select[name="chartXAxis"]').change(function() {
-        chart_xaxis_idx = this.value;
-        drawChart();
+    var dateTimeCols = [];
+    var vals = $('input[name="dateTimeCols"]').val().split(' ');
+    $.each(vals, function (i, v) {
+        dateTimeCols.push(parseInt(v, 10));
     });
-    $('select[name="chartSeries"]').change(function() {
-        chart_series = this.value;
-        chart_series_index = this.selectedIndex;
+
+    var numericCols = [];
+    var vals = $('input[name="numericCols"]').val().split(' ');
+    $.each(vals, function (i, v) {
+        numericCols.push(parseInt(v, 10));
+    });
+
+    // handle changing the x-axis
+    $('select[name="chartXAxis"]').change(function () {
+        currentSettings.mainAxis = parseInt($(this).val(), 10);
+        if (dateTimeCols.indexOf(currentSettings.mainAxis) != -1) {
+            $('span.span_timeline').show();
+        } else {
+            $('span.span_timeline').hide();
+            if (currentSettings.type == 'timeline') {
+                $('input#radio_line').prop('checked', true);
+                currentSettings.type = 'line';
+            }
+        }
+        if (numericCols.indexOf(currentSettings.mainAxis) != -1) {
+            $('span.span_scatter').show();
+        } else {
+            $('span.span_scatter').hide();
+            if (currentSettings.type == 'scatter') {
+                $('input#radio_line').prop('checked', true);
+                currentSettings.type = 'line';
+            }
+        }
+        var xaxis_title = $(this).children('option:selected').text();
+        $('input[name="xaxis_label"]').val(xaxis_title);
+        currentSettings.xaxisLabel = xaxis_title;
         drawChart();
     });
 
-    /* Sucks, we cannot just set axis labels, we have to redraw the chart completely */
-    $('input[name="xaxis_label"]').keyup(function() {
-        currentSettings.axes.xaxis.label = $(this).attr('value');
-        drawChart();
-    });
-    $('input[name="yaxis_label"]').keyup(function() {
-        currentSettings.axes.yaxis.label = $(this).attr('value');
+    // handle changing the selected data series
+    $('select[name="chartSeries"]').change(function () {
+        currentSettings.selectedSeries = getSelectedSeries();
+        var yaxis_title;
+        if (currentSettings.selectedSeries.length == 1) {
+            $('span.span_pie').show();
+            yaxis_title = $(this).children('option:selected').text();
+        } else {
+            $('span.span_pie').hide();
+            if (currentSettings.type == 'pie') {
+                $('input#radio_line').prop('checked', true);
+                currentSettings.type = 'line';
+            }
+            yaxis_title = PMA_messages.strYValues;
+        }
+        $('input[name="yaxis_label"]').val(yaxis_title);
+        currentSettings.yaxisLabel = yaxis_title;
         drawChart();
     });
 
+    // handle manual changes to the chart axis labels
+    $('input[name="xaxis_label"]').keyup(function () {
+        currentSettings.xaxisLabel = $(this).val();
+        drawChart();
+    });
+    $('input[name="yaxis_label"]').keyup(function () {
+        currentSettings.yaxisLabel = $(this).val();
+        drawChart();
+    });
+
+    $("#tblchartform").submit();
 });
 
 /**
  * Ajax Event handler for 'Go' button click
  *
  */
-$("#tblchartform").live('submit', function(event) {
-
-    if(!checkFormElementInRange(this, 'session_max_rows', PMA_messages['strNotValidRowNumber'], 1)
-        || !checkFormElementInRange(this, 'pos', PMA_messages['strNotValidRowNumber'], 0-1)) {
+$("#tblchartform").live('submit', function (event) {
+    if (!checkFormElementInRange(this, 'session_max_rows', PMA_messages.strNotValidRowNumber, 1) ||
+        !checkFormElementInRange(this, 'pos', PMA_messages.strNotValidRowNumber, 0 - 1)
+    ) {
         return false;
     }
 
     var $form = $(this);
-    if (! checkSqlQuery($form[0])) {
+    if (codemirror_editor) {
+        $form[0].elements['sql_query'].value = codemirror_editor.getValue();
+    }
+    if (!checkSqlQuery($form[0])) {
         return false;
     }
-
     // remove any div containing a previous error message
     $('.error').remove();
-
     var $msgbox = PMA_ajaxShowMessage();
-
     PMA_prepareForAjaxRequest($form);
 
-    $.post($form.attr('action'), $form.serialize() , function(data) {
-        if (data.success == true) {
+    $.post($form.attr('action'), $form.serialize(), function (data) {
+        if (data.success === true) {
             $('.success').fadeOut();
-
             if (typeof data.chartData != 'undefined') {
                 chart_data = jQuery.parseJSON(data.chartData);
                 drawChart();
+                $('div#querychart').height($('div#resizer').height() * 0.96);
+                $('div#querychart').width($('div#resizer').width() * 0.96);
+                currentChart.redraw({
+                    resetAxes : true
+                });
                 $('#querychart').show();
             }
         } else {
             PMA_ajaxRemoveMessage($msgbox);
             PMA_ajaxShowMessage(data.error, false);
-            chart_data = null;
-            drawChart();
         }
         PMA_ajaxRemoveMessage($msgbox);
     }, "json"); // end $.post()
 
     return false;
 }); // end
-
-function drawChart() {
-    nonJqplotSettings.chart.width = $('#resizer').width() - 20;
-    nonJqplotSettings.chart.height = $('#resizer').height() - 20;
-
-    // todo: a better way using .replot() ?
-    if (currentChart != null) {
-        currentChart.destroy();
-    }
-    currentChart = PMA_queryChart(chart_data, currentSettings, nonJqplotSettings);
-}
-
-function in_array(element,array)
-{
-    for(var i=0; i < array.length; i++)
-        if(array[i] == element) return true;
-    return false;
-}
-
-function PMA_queryChart(data, passedSettings, passedNonJqplotSettings)
-{
-    if ($('#querychart').length == 0) return;
-
-    var columnNames = Array();
-
-    var series = new Array();
-    var xaxis = { type: 'linear' };
-    var yaxis = new Object();
-
-    $.each(data[0],function(index,element) {
-        columnNames.push(index);
-    });
-
-    switch(passedNonJqplotSettings.chart.type) {
-        case 'column':
-        case 'spline':
-        case 'line':
-        case 'bar':
-            var j = 0;
-            for (var i = 0; i < columnNames.length; i++) {
-                if (i != chart_xaxis_idx) {
-                    series[j] = new Array();
-                    if (chart_series == 'columns' || chart_series == columnNames[i]) {
-                        $.each(data,function(key,value) {
-                            series[j].push(
-                                [
-                                value[columnNames[chart_xaxis_idx]],
-                                // todo: not always a number?
-                                parseFloat(value[columnNames[i]])
-                                ]
-                            );
-                        });
-                        j++;
-                    }
-                }
-            }
-            if(columnNames.length == 2)
-                yaxis.title = { text: columnNames[0] };
-            break;
-
-        case 'pie':
-            // only available for a specific column
-            // todo: warn the user about this
-            if (chart_series != 'columns') {
-                series[0] = new Array();
-                $.each(data,function(key,value) {
-                    series[0].push(
-                        [
-                        value[columnNames[chart_xaxis_idx]],
-                        parseFloat(value[chart_series])
-                        ]
-                     );
-                });
-                break;
-            }
-    }
-
-    var settings = {
-        title: {
-            text: '' 
-            //margin:20
-        }
-    };
-
-    if (passedNonJqplotSettings.chart.type == 'line') {
-        settings.axes = {
-            xaxis: {
-            },
-            yaxis: {
-            }
-        }
-    }
-
-    if (passedNonJqplotSettings.chart.type == 'bar') {
-        settings.seriesDefaults = {
-            renderer: $.jqplot.BarRenderer,
-            rendererOptions: {
-                barDirection: 'vertical',
-                highlightMouseOver: true
-            }
-        };
-        settings.axes = {
-            xaxis: {
-                renderer: $.jqplot.CategoryAxisRenderer
-            },
-            yaxis: {
-            }
-        };
-    }
-
-    if (passedNonJqplotSettings.chart.type == 'spline') {
-        settings.seriesDefaults = {
-            rendererOptions: {
-                smooth: true 
-            }
-        };
-    }
-
-    if (passedNonJqplotSettings.chart.type == 'pie') {
-        settings.seriesDefaults = {
-            renderer: $.jqplot.PieRenderer,
-            rendererOptions: {
-                showDataLabels: true,
-                highlightMouseOver: true,
-                showDataLabels: true,
-                dataLabels: 'value'
-            }
-        };
-    }
-    // Overwrite/Merge default settings with passedsettings
-    $.extend(true, settings, passedSettings);
-
-    settings.series = new Array();
-    for (var i = 0; i < columnNames.length; i++) {
-        if (parseInt(chart_xaxis_idx) != i) {
-            if (chart_series == 'columns' || chart_series == columnNames[i]) {
-                settings.series.push({ label: columnNames[i] });
-            }
-        }
-    }
-
-    return $.jqplot('querychart', series, settings);
-}

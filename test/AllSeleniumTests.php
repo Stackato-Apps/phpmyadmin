@@ -3,35 +3,52 @@
 /**
  * runs all defined Selenium tests
  *
- * @package PhpMyAdmin-test
+ * @package    PhpMyAdmin-test
+ * @subpackage Selenium
  */
 
+require_once 'PHPUnit/TextUI/TestRunner.php';
+require_once __DIR__ . '/selenium/PmaSeleniumLoginTest.php';
+require_once __DIR__ . '/selenium/PmaSeleniumXssTest.php';
+require_once __DIR__ . '/selenium/PmaSeleniumPrivilegesTest.php';
+require_once __DIR__ . '/selenium/PmaSeleniumCreateDropDatabaseTest.php';
+require_once __DIR__ . '/selenium/PmaSeleniumCreateRemoveUserTest.php';
 
 /**
+ * AllSeleniumTests class
  *
+ * Runs all the selenium test cases
+ *
+ * @package    PhpMyAdmin-test
+ * @subpackage Selenium
  */
-require_once 'PHPUnit/Framework.php';
-require_once 'PHPUnit/TextUI/TestRunner.php';
-require_once './PmaSeleniumTestCase.php';
-require_once './PmaSeleniumLoginTest.php';
-require_once './PmaSeleniumXssTest.php';
-require_once './PmaSeleniumPrivilegesTest.php';
-
 class AllSeleniumTests
 {
+    /**
+     * Main method
+     *
+     * @return void
+     */
     public static function main()
     {
         $parameters = array();
         PHPUnit_TextUI_TestRunner::run(self::suite(), $parameters);
     }
 
+    /**
+     * Creates a SeleniumTestSuite and add all the selenium test cases to it
+     *
+     * @return PHPUnit_Extensions_SeleniumTestSuite
+     */
     public static function suite()
     {
-        $suite = new PHPUnit_Framework_TestSuite('phpMyAdmin');
+        $suite = new PHPUnit_Extensions_SeleniumTestSuite('phpMyAdmin');
 
         $suite->addTestSuite('PmaSeleniumLoginTest');
         $suite->addTestSuite('PmaSeleniumXssTest');
         $suite->addTestSuite('PmaSeleniumPrivilegesTest');
+        $suite->addTestSuite('PmaSeleniumCreateDropDatabaseTest');
+        $suite->addTestSuite('PmaSeleniumCreateRemoveUserTest');
         return $suite;
     }
 }

@@ -1,189 +1,157 @@
-$(function() {
-    var textFilter = null, odd_row = false;
-    var testString = 'abcdefghijklmnopqrstuvwxyz0123456789,ABCEFGHIJKLMOPQRSTUVWXYZ';
-    var $tmpDiv, charWidth;
+/* vim: set expandtab sw=4 ts=4 sts=4: */
 
-    // Global vars
-    editLink = '<a href="#" class="editLink" onclick="return editVariable(this);">' + PMA_getImage('b_edit.png') + ' ' + PMA_messages['strEdit'] + '</a>';
-    saveLink = '<a href="#" class="saveLink">' + PMA_getImage('b_save.png') + ' ' + PMA_messages['strSave'] + '</a> ';
-    cancelLink = '<a href="#" class="cancelLink">' + PMA_getImage('b_close.png') + ' ' + PMA_messages['strCancel'] + '</a> ';
-
-    /* Variable editing */
-    if (is_superuser) {
-        $('table.data tbody tr td:nth-child(2)').hover(
-            function() {
-                // Only add edit element if it is the global value, not session value and not when the element is being edited
-                if ($(this).parent().children('th').length > 0 && ! $(this).hasClass('edit')) {
-                    $(this).prepend(editLink);
-                }
-            },
-            function() {
-                $(this).find('a.editLink').remove();
-            }
-        );
-    }
-
-    // Filter options are invisible for disabled js users
-    $('fieldset#tableFilter').css('display','');
-     
-    $('#filterText').keyup(function(e) {
-        if ($(this).val().length == 0) {
-            textFilter=null;
-        } else {
-            textFilter = new RegExp("(^| )"+$(this).val().replace(/_/g,' '),'i');
-        }
-        filterVariables();
-    });
-
-    if (location.hash.substr(1).split('=')[0] == 'filter') {
-        var name = location.hash.substr(1).split('=')[1];
-        // Only allow variable names
-        if (! name.match(/[^0-9a-zA-Z_]+/)) {
-            $('#filterText').attr('value',name).trigger('keyup');
-        }
-    }
-    
-    /* Table width limiting */
-    $('table.data').after($tmpDiv=$('<span>'+testString+'</span>'));
-    charWidth = $tmpDiv.width() / testString.length;
-    $tmpDiv.remove();
-
-    $(window).resize(limitTableWidth);
-    limitTableWidth();
-    
-    /* This function chops of long variable values to keep the table from overflowing horizontally 
-     * It does so by taking a test string and calculating an average font width and removing 'excess width / average font width' 
-     * chars, so it is not very accurate.
-     */
-    function limitTableWidth() {
-        var fulltext;
-        var charDiff;
-        var maxTableWidth;
-        var $tmpTable;
-
-        $('table.data').after($tmpTable = $('<table id="testTable" style="width:100%;"><tr><td>' + testString + '</td></tr></table>'));
-        maxTableWidth = $('#testTable').width();
-        $tmpTable.remove();
-        charDiff =  ($('table.data').width() - maxTableWidth) / charWidth;
-
-        if ($('body').innerWidth() < $('table.data').width() + 10 || $('body').innerWidth() > $('table.data').width() + 20) {
-            var maxChars = 0;
-
-            $('table.data tbody tr td:nth-child(2)').each(function() {
-                maxChars = Math.max($(this).text().length, maxChars);
-            });
-
-            // Do not resize smaller if there's only 50 chars displayed already
-            if (charDiff > 0 && maxChars < 50) { return; }
-
-            $('table.data tbody tr td:nth-child(2)').each(function() {
-                if ((charDiff > 0 && $(this).text().length > maxChars - charDiff) || (charDiff < 0 && $(this).find('abbr.cutoff').length > 0)) {
-                    if ($(this).find('abbr.cutoff').length > 0) {
-                        fulltext = $(this).find('abbr.cutoff').attr('title');
-                    } else {
-                        fulltext = $(this).text();
-                        // Do not cut off elements with html in it and hope they are not too long
-                        if (fulltext.length != $(this).html().length) { return 0; }
-                    }
-
-                    if (fulltext.length < maxChars - charDiff) {
-                        $(this).html(fulltext);
-                    } else {
-                        $(this).html('<abbr class="cutoff" title="' + fulltext + '">' + fulltext.substr(0, maxChars - charDiff - 3) + '...</abbr>');
-                    }
-                }
-            });
-        }
-    }
-    
-    /* Filters the rows by the user given regexp */
-    function filterVariables() {
-        var mark_next = false, firstCell;
-        odd_row = false;
-        
-        $('table.filteredData tbody tr').each(function() {
-            firstCell = $(this).children(':first');
-
-            if (mark_next || textFilter == null || textFilter.exec(firstCell.text())) {
-                // If current global value is different from session value (=has class diffSession), then display that one too
-                mark_next = $(this).hasClass('diffSession') && ! mark_next;
-
-                odd_row = ! odd_row;
-                $(this).css('display','');
-                if (odd_row) {
-                    $(this).addClass('odd');
-                    $(this).removeClass('even');
-                } else {
-                    $(this).addClass('even');
-                    $(this).removeClass('odd');
-                }
-            } else {
-                $(this).css('display','none');
-            }
-        });
-    }
+/**
+ * Unbind all event handlers before tearing down a page
+ */
+AJAX.registerTeardown('server_variables.js', function () {
+    $('#serverVariables .var-row').unbind('hover');
+    $('#filterText').unbind('keyup');
+    $('a.editLink').die('click');
+    $('#serverVariables').find('.var-name').find('a img').remove();
 });
 
-/* Called by inline js. Allows the user to edit a server variable */
-function editVariable(link)
-{
-    var varName = $(link).parent().parent().find('th:first').first().text().replace(/ /g,'_');
-    var mySaveLink = $(saveLink);
-    var myCancelLink = $(cancelLink);
-    var $cell = $(link).parent();
+AJAX.registerOnload('server_variables.js', function () {
+    var $editLink = $('a.editLink');
+    var $saveLink = $('a.saveLink');
+    var $cancelLink = $('a.cancelLink');
+    var $filterField = $('#filterText');
 
-    $cell.addClass('edit');
-    // remove edit link
-    $cell.find('a.editLink').remove();
+    /* Show edit link on hover */
+    $('#serverVariables').delegate('.var-row', 'hover', function (event) {
+        if (event.type === 'mouseenter') {
+            var $elm = $(this).find('.var-value');
+            // Only add edit element if the element is not being edited
+            if ($elm.hasClass('editable') && ! $elm.hasClass('edit')) {
+                $elm.prepend($editLink.clone().show());
+            }
+        } else {
+            $(this).find('a.editLink').remove();
+        }
+    }).find('.var-name').find('a').append(
+        $('#docImage').clone().show()
+    );
 
-    mySaveLink.click(function() {
-        $.get('server_variables.php?' + url_query, {
-                ajax_request: true,
-                type: 'setval',
-                varName: varName,
-                varValue: $cell.find('input').attr('value')
-            }, function(data) {
-                if (data.success) {
-                    $cell.html(data.variable);
+    /* Launches the variable editor */
+    $editLink.live('click', function (event) {
+        event.preventDefault();
+        editVariable(this);
+    });
+
+    /* Event handler for variables filter */
+    $filterField.keyup(function () {
+        var textFilter = null, val = $(this).val();
+        if (val.length !== 0) {
+            textFilter = new RegExp("(^| )" + val.replace(/_/g, ' '), 'i');
+        }
+        filterVariables(textFilter);
+    });
+
+    /* Trigger filtering of the list based on incoming variable name */
+    if ($filterField.val()) {
+        $filterField.trigger('keyup').select();
+    }
+
+    /* Filters the rows by the user given regexp */
+    function filterVariables(textFilter) {
+        var mark_next = false, $row, odd_row = false;
+        $('#serverVariables .var-row').not('.var-header').each(function () {
+            $row = $(this);
+            if (mark_next || textFilter === null ||
+                textFilter.exec($row.find('.var-name').text())
+            ) {
+                // If current global value is different from session value
+                // (has class diffSession), then display that one too
+                mark_next = $row.hasClass('diffSession') && ! mark_next;
+
+                odd_row = ! odd_row;
+                $row.css('display', '');
+                if (odd_row) {
+                    $row.addClass('odd').removeClass('even');
                 } else {
-                    PMA_ajaxShowMessage(data.error, false);
-                    $cell.html($cell.find('span.oldContent').html());
+                    $row.addClass('even').removeClass('odd');
                 }
-                $cell.removeClass('edit');
-            }, 'json');
+            } else {
+                $row.css('display', 'none');
+            }
+        });
+    }
 
-        return false;
-    });
+    /* Allows the user to edit a server variable */
+    function editVariable(link) {
+        var $cell = $(link).parent();
+        var varName = $cell.parent().find('.var-name').text().replace(/ /g, '_');
+        var $mySaveLink = $saveLink.clone().show();
+        var $myCancelLink = $cancelLink.clone().show();
+        var $msgbox = PMA_ajaxShowMessage();
 
-    myCancelLink.click(function() {
-        $cell.html($cell.find('span.oldContent').html());
-        $cell.removeClass('edit');
-        return false;
-    });
+        $cell
+            .addClass('edit') // variable is being edited
+            .find('a.editLink')
+            .remove(); // remove edit link
 
-    $.get('server_variables.php?' + url_query, {
-            ajax_request: true,
-            type: 'getval',
-            varName: varName
-        }, function(data) {
-            // hide original content
-            $cell.html('<span class="oldContent" style="display:none;">' + $cell.html() + '</span>');
-            // put edit field and save/cancel link
-            $cell.prepend('<table class="serverVariableEditTable" border="0"><tr><td></td><td style="width:100%;">' +
-                          '<input type="text" id="variableEditArea" value="' + data + '" /></td></tr></table>');
-            $cell.find('table td:first').append(mySaveLink);
-            $cell.find('table td:first').append(' ');
-            $cell.find('table td:first').append(myCancelLink);
-
-            // Keyboard shortcuts to the rescue
-            $('input#variableEditArea').focus();
-            $('input#variableEditArea').keydown(function(event) {
-                // Enter key
-                if(event.keyCode == 13) mySaveLink.trigger('click');
-                // Escape key
-                if(event.keyCode == 27) myCancelLink.trigger('click');
-            });
+        $mySaveLink.click(function () {
+            var $msgbox = PMA_ajaxShowMessage(PMA_messages.strProcessingRequest);
+            $.get($(this).attr('href'), {
+                    ajax_request: true,
+                    type: 'setval',
+                    varName: varName,
+                    varValue: $cell.find('input').val()
+                }, function (data) {
+                    if (data.success) {
+                        $cell
+                            .html(data.variable)
+                            .data('content', data.variable);
+                        PMA_ajaxRemoveMessage($msgbox);
+                    } else {
+                        PMA_ajaxShowMessage(data.error, false);
+                        $cell.html($cell.data('content'));
+                    }
+                    $cell.removeClass('edit');
+                });
+            return false;
         });
 
-    return false;
-}
+        $myCancelLink.click(function () {
+            $cell
+                .html($cell.data('content'))
+                .removeClass('edit');
+            return false;
+        });
+
+        $.get($mySaveLink.attr('href'), {
+                ajax_request: true,
+                type: 'getval',
+                varName: varName
+            }, function (data) {
+                if (data.success === true) {
+                    var $editor = $('<div />', {'class': 'serverVariableEditor'})
+                        .append($myCancelLink)
+                        .append(' ')
+                        .append($mySaveLink)
+                        .append(' ')
+                        .append(
+                            $('<div/>').append(
+                                $('<input />', {type: 'text'}).val(data.message)
+                            )
+                        );
+                    // Save and replace content
+                    $cell
+                    .data('content', $cell.html())
+                    .html($editor)
+                    .find('input')
+                    .focus()
+                    .keydown(function (event) { // Keyboard shortcuts
+                        if (event.keyCode === 13) { // Enter key
+                            $mySaveLink.trigger('click');
+                        } else if (event.keyCode === 27) { // Escape key
+                            $myCancelLink.trigger('click');
+                        }
+                    });
+                    PMA_ajaxRemoveMessage($msgbox);
+                } else {
+                    $cell.removeClass('edit');
+                    PMA_ajaxShowMessage(data.error);
+                }
+            });
+    }
+});

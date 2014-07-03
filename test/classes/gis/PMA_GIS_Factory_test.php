@@ -1,25 +1,28 @@
 <?php
+/* vim: set expandtab sw=4 ts=4 sts=4: */
 /**
  * Test for PMA_GIS_Factory
  *
  * @package PhpMyAdmin-test
  */
-require_once 'libraries/gis/pma_gis_geometry.php';
-require_once 'libraries/gis/pma_gis_linestring.php';
-require_once 'libraries/gis/pma_gis_multilinestring.php';
-require_once 'libraries/gis/pma_gis_point.php';
-require_once 'libraries/gis/pma_gis_multipoint.php';
-require_once 'libraries/gis/pma_gis_polygon.php';
-require_once 'libraries/gis/pma_gis_multipolygon.php';
-require_once 'libraries/gis/pma_gis_geometrycollection.php';
+require_once 'libraries/gis/GIS_Geometry.class.php';
+require_once 'libraries/gis/GIS_Linestring.class.php';
+require_once 'libraries/gis/GIS_Multilinestring.class.php';
+require_once 'libraries/gis/GIS_Point.class.php';
+require_once 'libraries/gis/GIS_Multipoint.class.php';
+require_once 'libraries/gis/GIS_Polygon.class.php';
+require_once 'libraries/gis/GIS_Multipolygon.class.php';
+require_once 'libraries/gis/GIS_Geometrycollection.class.php';
 
 /*
  * Include to test
  */
-require_once 'libraries/gis/pma_gis_factory.php';
+require_once 'libraries/gis/GIS_Factory.class.php';
 
 /**
  * Test class for PMA_GIS_Factory
+ *
+ * @package PhpMyAdmin-test
  */
 class PMA_GIS_FactoryTest extends PHPUnit_Framework_TestCase
 {
@@ -31,7 +34,7 @@ class PMA_GIS_FactoryTest extends PHPUnit_Framework_TestCase
      * @param object $geom geometry object
      *
      * @dataProvider providerForTestFactory
-     * @return nothing
+     * @return void
      */
     public function testFactory($type, $geom)
     {

@@ -2,8 +2,8 @@
 # vim: expandtab sw=4 ts=4 sts=4:
 export LC_ALL=C
 
-# Generate PHP code for advisor rules
-php ./scripts/advisor2php > po/advisory_rules.php
+# Exit on failure
+set -e
 
 # Update pot (template), ensure that advisor is at the end
 LOCS=`ls po/*.po | sed 's@.*/\(.*\)\.po@\1@'`
@@ -15,10 +15,13 @@ xgettext \
     --add-comments=l10n \
     --add-location \
     --debug \
+    --from-code=utf-8 \
     --keyword=__ --keyword=_pgettext:1c,2 --keyword=_ngettext:1,2 \
     --copyright-holder="phpMyAdmin devel team" \
-    `find . -name '*.php' -not -path './test/*' -not -path './po/*' | sort` \
-    po/advisory_rules.php
+    `find . -name '*.php' -not -path './test/*' -not -path './po/*' -not -path './release/*' | sort`
+
+# Generate PHP code for advisor rules
+php ./scripts/advisor2po >> po/phpmyadmin.pot
 
 ver=`sed -n "/PMA_VERSION', '/ s/.*PMA_VERSION', '\(.*\)'.*/\1/p" libraries/Config.class.php`
 
@@ -38,9 +41,9 @@ for loc in $LOCS ; do
         s/VERSION/'$ver'/;
         s/Project-Id-Version: phpMyAdmin .*/Project-Id-Version: phpMyAdmin '$ver'\\n"/;
         ' po/$loc.po
-    if [ -f ../localized_docs/po/$loc.po ] ; then
-        msgmerge --previous -C ../localized_docs/po/$loc.po -U po/$loc.po po/phpmyadmin.pot
-    else
-        msgmerge --previous -U po/$loc.po po/phpmyadmin.pot
-    fi
+    msgmerge --previous -U po/$loc.po po/phpmyadmin.pot
 done
+
+# Commit changes
+git add po/*.po po/phpmyadmin.pot
+git commit -m 'Update po files'

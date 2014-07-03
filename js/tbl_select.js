@@ -12,9 +12,20 @@
  * Actions ajaxified here:
  * Table Search
  */
-$(document).ready(function() {
+
+/**
+ * Unbind all event handlers before tearing down a page
+ */
+AJAX.registerTeardown('tbl_select.js', function () {
+    $('#togglesearchformlink').unbind('click');
+    $("#tbl_search_form.ajax").die('submit');
+    $('select.geom_func').unbind('change');
+    $('span.open_search_gis_editor').die('click');
+});
+
+AJAX.registerOnload('tbl_select.js', function () {
     /**
-     * Prepare a div containing a link, otherwise it's incorrectly displayed 
+     * Prepare a div containing a link, otherwise it's incorrectly displayed
      * after a couple of clicks
      */
     $('<div id="togglesearchformdiv"><a id="togglesearchformlink"></a></div>')
@@ -23,14 +34,14 @@ $(document).ready(function() {
      .hide();
 
     $('#togglesearchformlink')
-        .html(PMA_messages['strShowSearchCriteria'])
-        .bind('click', function() {
+        .html(PMA_messages.strShowSearchCriteria)
+        .bind('click', function () {
             var $link = $(this);
             $('#tbl_search_form').slideToggle();
-            if ($link.text() == PMA_messages['strHideSearchCriteria']) {
-                $link.text(PMA_messages['strShowSearchCriteria']);
+            if ($link.text() == PMA_messages.strHideSearchCriteria) {
+                $link.text(PMA_messages.strShowSearchCriteria);
             } else {
-                $link.text(PMA_messages['strHideSearchCriteria']);
+                $link.text(PMA_messages.strHideSearchCriteria);
             }
             // avoid default click action
             return false;
@@ -38,17 +49,14 @@ $(document).ready(function() {
 
     /**
      * Ajax event handler for Table Search
-     * 
-     * (see $GLOBALS['cfg']['AjaxEnable'])
-     * @uses    PMA_ajaxShowMessage()
      */
-    $("#tbl_search_form.ajax").live('submit', function(event) {
-
+    $("#tbl_search_form.ajax").live('submit', function (event) {
         var unaryFunctions = [
-            'IS NULL', 
+            'IS NULL',
             'IS NOT NULL',
             "= ''",
-            "!= ''"];
+            "!= ''"
+        ];
 
         // jQuery object to reuse
         $search_form = $(this);
@@ -56,12 +64,12 @@ $(document).ready(function() {
 
         // empty previous search results while we are waiting for new results
         $("#sqlqueryresults").empty();
-        var $msgbox = PMA_ajaxShowMessage(PMA_messages['strSearching'], false);
+        var $msgbox = PMA_ajaxShowMessage(PMA_messages.strSearching, false);
 
         PMA_prepareForAjaxRequest($search_form);
 
         var values = {};
-        $search_form.find(':input').each(function() {
+        $search_form.find(':input').each(function () {
             var $input = $(this);
             if ($input.attr('type') == 'checkbox' || $input.attr('type') == 'radio') {
                 if ($input.is(':checked')) {
@@ -71,124 +79,121 @@ $(document).ready(function() {
                 values[this.name] = $input.val();
             }
         });
-        var columnCount = $('select[name="param[]"] option').length;
+        var columnCount = $('select[name="columnsToDisplay[]"] option').length;
         // Submit values only for the columns that have unary column operator or a search criteria
         for (var a = 0; a < columnCount; a++) {
-
-            if ($.inArray(values['func[' + a + ']'], unaryFunctions) >= 0) {
+            if ($.inArray(values['criteriaColumnOperators[' + a + ']'], unaryFunctions) >= 0) {
                 continue;
             }
-            if (values['fields[' + a + ']'] == '' || values['fields[' + a + ']'] == null) {
-                delete values['fields[' + a + ']'];
-                delete values['func[' + a + ']'];
-                delete values['names[' + a + ']'];
-                delete values['types[' + a + ']'];
-                delete values['collations[' + a + ']'];
+
+            if (values['criteriaValues[' + a + ']'] === '' || values['criteriaValues[' + a + ']'] === null) {
+                delete values['criteriaValues[' + a + ']'];
+                delete values['criteriaColumnOperators[' + a + ']'];
+                delete values['criteriaColumnNames[' + a + ']'];
+                delete values['criteriaColumnTypes[' + a + ']'];
+                delete values['criteriaColumnCollations[' + a + ']'];
             }
         }
         // If all columns are selected, use a single parameter to indicate that
-        if (values['param[]'] != null) {
-            if (values['param[]'].length == columnCount) {
-                delete values['param[]'];
+        if (values['columnsToDisplay[]'] !== null) {
+            if (values['columnsToDisplay[]'].length == columnCount) {
+                delete values['columnsToDisplay[]'];
                 values['displayAllColumns'] = true;
             }
         } else {
             values['displayAllColumns'] = true;
         }
 
-        $.post($search_form.attr('action'), values, function(response) {
+        $.post($search_form.attr('action'), values, function (data) {
             PMA_ajaxRemoveMessage($msgbox);
-            if (typeof response == 'string') {
-                // found results
-                $("#sqlqueryresults").html(response);
-                $("#sqlqueryresults").trigger('makegrid');
+            if (data.success === true) {
+                if (typeof data.sql_query !== 'undefined') { // zero rows
+                    $("#sqlqueryresults").html(data.sql_query);
+                } else { // results found
+                    $("#sqlqueryresults").html(data.message);
+                    $("#sqlqueryresults").trigger('makegrid').trigger('stickycolumns');
+                }
                 $('#tbl_search_form')
                 // workaround for bug #3168569 - Issue on toggling the "Hide search criteria" in chrome.
-                 .slideToggle()    
+                 .slideToggle()
                  .hide();
                 $('#togglesearchformlink')
                  // always start with the Show message
-                 .text(PMA_messages['strShowSearchCriteria'])
+                 .text(PMA_messages.strShowSearchCriteria);
                 $('#togglesearchformdiv')
-                 // now it's time to show the div containing the link 
+                 // now it's time to show the div containing the link
                  .show();
                  // needed for the display options slider in the results
-                 PMA_init_slider();
+                PMA_init_slider();
             } else {
-                // error message (zero rows)
-                if (response.message != undefined) {
-                    $("#sqlqueryresults").html(response['sql_query']);
-                }
-                // other error (syntax error?)
-                if (response.error != undefined) {
-                    $("#sqlqueryresults").html(response['error']);
-                }
+                $("#sqlqueryresults").html(data.error);
             }
-        }) // end $.post()
-    })
+            PMA_highlightSQL($('#sqlqueryresults'));
+        }); // end $.post()
+    });
 
     // Following section is related to the 'function based search' for geometry data types.
     // Initialy hide all the open_gis_editor spans
-    $('.open_search_gis_editor').hide();
+    $('span.open_search_gis_editor').hide();
 
-    $('.geom_func').bind('change', function() {
+    $('select.geom_func').bind('change', function () {
         var $geomFuncSelector = $(this);
 
         var binaryFunctions = [
-          'Contains',
-          'Crosses',
-          'Disjoint',
-          'Equals',
-          'Intersects',
-          'Overlaps',
-          'Touches',
-          'Within',
-          'MBRContains',
-          'MBRDisjoint',
-          'MBREquals',
-          'MBRIntersects',
-          'MBROverlaps',
-          'MBRTouches',
-          'MBRWithin',
-          'ST_Contains',
-          'ST_Crosses',
-          'ST_Disjoint',
-          'ST_Equals',
-          'ST_Intersects',
-          'ST_Overlaps',
-          'ST_Touches',
-          'ST_Within'
+            'Contains',
+            'Crosses',
+            'Disjoint',
+            'Equals',
+            'Intersects',
+            'Overlaps',
+            'Touches',
+            'Within',
+            'MBRContains',
+            'MBRDisjoint',
+            'MBREquals',
+            'MBRIntersects',
+            'MBROverlaps',
+            'MBRTouches',
+            'MBRWithin',
+            'ST_Contains',
+            'ST_Crosses',
+            'ST_Disjoint',
+            'ST_Equals',
+            'ST_Intersects',
+            'ST_Overlaps',
+            'ST_Touches',
+            'ST_Within'
         ];
 
         var tempArray = [
-           'Envelope',
-           'EndPoint',
-           'StartPoint',
-           'ExteriorRing',
-           'Centroid',
-           'PointOnSurface'
+            'Envelope',
+            'EndPoint',
+            'StartPoint',
+            'ExteriorRing',
+            'Centroid',
+            'PointOnSurface'
         ];
         var outputGeomFunctions = binaryFunctions.concat(tempArray);
 
-        // If the chosen function takes two geomerty objects as parameters
+        // If the chosen function takes two geometry objects as parameters
         var $operator = $geomFuncSelector.parents('tr').find('td:nth-child(5)').find('select');
-        if ($.inArray($geomFuncSelector.val(), binaryFunctions) >= 0){
-            $operator.attr('readonly', true);
+        if ($.inArray($geomFuncSelector.val(), binaryFunctions) >= 0) {
+            $operator.prop('readonly', true);
         } else {
-            $operator.attr('readonly', false);
+            $operator.prop('readonly', false);
         }
 
         // if the chosen function's output is a geometry, enable GIS editor
-        var $editorSpan = $geomFuncSelector.parents('tr').find('.open_search_gis_editor');
-        if ($.inArray($geomFuncSelector.val(), outputGeomFunctions) >= 0){
+        var $editorSpan = $geomFuncSelector.parents('tr').find('span.open_search_gis_editor');
+        if ($.inArray($geomFuncSelector.val(), outputGeomFunctions) >= 0) {
             $editorSpan.show();
         } else {
             $editorSpan.hide();
         }
-        
+
     });
 
-    $('.open_search_gis_editor').live('click', function(event) {
+    $('span.open_search_gis_editor').live('click', function (event) {
         event.preventDefault();
 
         var $span = $(this);
@@ -198,12 +203,13 @@ $(document).ready(function() {
         var field = 'Parameter';
         // Column type
         var geom_func = $span.parents('tr').find('.geom_func').val();
+        var type;
         if (geom_func == 'Envelope') {
-            var type = 'polygon';
+            type = 'polygon';
         } else if (geom_func == 'ExteriorRing') {
-            var type = 'linestring';
+            type = 'linestring';
         } else {
-            var type = 'point';
+            type = 'point';
         }
         // Names of input field and null checkbox
         var input_name = $span.parent('td').children("input[type='text']").attr('name');
@@ -218,4 +224,4 @@ $(document).ready(function() {
         }
     });
 
-}, 'top.frame_content'); // end $(document).ready()
+});

@@ -7,20 +7,33 @@
  */
 
 /*
- * Needed for PMA_backquote() and PMA_RTN_getQueryFromRequest()
+ * Needed for backquote() and PMA_RTN_getQueryFromRequest()
  */
-require_once 'libraries/common.lib.php';
+require_once 'libraries/Util.class.php';
 require_once 'libraries/php-gettext/gettext.inc';
+require_once './libraries/Types.class.php';
 
 /*
  * Include to test.
  */
 require_once 'libraries/rte/rte_routines.lib.php';
 
-
-class PMA_RTN_getQueryFromRequest_test extends PHPUnit_Framework_TestCase
+/**
+ * Test for generating CREATE [PROCEDURE|FUNCTION] query from HTTP request
+ *
+ * @package PhpMyAdmin-test
+ */
+class PMA_RTN_GetQueryFromRequest_Test extends PHPUnit_Framework_TestCase
 {
     /**
+     * Test for PMA_RTN_getQueryFromRequest
+     *
+     * @param array  $request Request
+     * @param string $query   Query
+     * @param int    $num_err Error number
+     *
+     * @return void
+     *
      * @dataProvider provider
      */
     public function testgetQueryFromRequest($request, $query, $num_err)
@@ -29,7 +42,7 @@ class PMA_RTN_getQueryFromRequest_test extends PHPUnit_Framework_TestCase
 
         $cfg['ShowFunctionFields'] = false;
 
-        include 'libraries/data_mysql.inc.php';
+        $GLOBALS['PMA_Types'] = new PMA_Types_MySQL();
 
         $errors = array();
         PMA_RTN_setGlobals();
@@ -40,6 +53,11 @@ class PMA_RTN_getQueryFromRequest_test extends PHPUnit_Framework_TestCase
         $this->assertEquals($num_err, count($errors));
     }
 
+    /**
+     * Data provider for testgetQueryFromRequest
+     *
+     * @return array
+     */
     public function provider()
     {
         return array(

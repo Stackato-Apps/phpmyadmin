@@ -11,12 +11,12 @@
 /**
  * Modify form controls when the "NULL" checkbox is checked
  *
- * @param   theType     string   the MySQL field type
- * @param   urlField    string   the urlencoded field name - OBSOLETE
- * @param   md5Field    string   the md5 hashed field name
- * @param   multi_edit  string   the multi_edit row sequence number
+ * @param theType     string   the MySQL field type
+ * @param urlField    string   the urlencoded field name - OBSOLETE
+ * @param md5Field    string   the md5 hashed field name
+ * @param multi_edit  string   the multi_edit row sequence number
  *
- * @return  boolean  always true
+ * @return boolean  always true
  */
 function nullify(theType, urlField, md5Field, multi_edit)
 {
@@ -38,7 +38,7 @@ function nullify(theType, urlField, md5Field, multi_edit)
             elts.checked = false;
         } else {
             var elts_cnt = elts.length;
-            for (var i = 0; i < elts_cnt; i++ ) {
+            for (var i = 0; i < elts_cnt; i++) {
                 elts[i].checked = false;
             } // end for
 
@@ -71,14 +71,14 @@ function nullify(theType, urlField, md5Field, multi_edit)
  * Start of validation part
  */
 //function checks the number of days in febuary
-function daysInFebruary (year)
+function daysInFebruary(year)
 {
-    return (((year % 4 == 0) && ( (!(year % 100 == 0)) || (year % 400 == 0))) ? 29 : 28 );
+    return (((year % 4 === 0) && (((year % 100 !== 0)) || (year % 400 === 0))) ? 29 : 28);
 }
 //function to convert single digit to double digit
 function fractionReplace(num)
 {
-    num = parseInt(num);
+    num = parseInt(num, 10);
     return num >= 1 && num <= 9 ? '0' + num : '00';
 }
 
@@ -89,66 +89,62 @@ function fractionReplace(num)
 * 3) 02-12-23
 * 4) And instead of using '-' the following punctuations can be used (+,.,*,^,@,/) All these are accepted by mysql as well. Therefore no issues
 */
-function isDate(val,tmstmp)
+function isDate(val, tmstmp)
 {
-    val=val.replace(/[.|*|^|+|//|@]/g,'-');
-    var arrayVal=val.split("-");
-    for(var a=0;a<arrayVal.length;a++)
-    {
-        if(arrayVal[a].length==1)
-            arrayVal[a]=fractionReplace(arrayVal[a]);
+    val = val.replace(/[.|*|^|+|//|@]/g, '-');
+    var arrayVal = val.split("-");
+    for (var a = 0; a < arrayVal.length; a++) {
+        if (arrayVal[a].length == 1) {
+            arrayVal[a] = fractionReplace(arrayVal[a]);
+        }
     }
-    val=arrayVal.join("-");
-    var pos=2;
-            dtexp=new RegExp(/^([0-9]{4})-(((01|03|05|07|08|10|12)-((0[0-9])|([1-2][0-9])|(3[0-1])))|((02|04|06|09|11)-((0[0-9])|([1-2][0-9])|30)))$/);
-        if(val.length==8)
-        {
-            dtexp=new RegExp(/^([0-9]{2})-(((01|03|05|07|08|10|12)-((0[0-9])|([1-2][0-9])|(3[0-1])))|((02|04|06|09|11)-((0[0-9])|([1-2][0-9])|30)))$/);
-            pos=0;
-        }
-        if(dtexp.test(val))
-        {
-            var month=parseInt(val.substring(pos+3,pos+5));
-            var day=parseInt(val.substring(pos+6,pos+8));
-            var year=parseInt(val.substring(0,pos+2));
-            if(month==2&&day>daysInFebruary(year))
-                return false;
-            if(val.substring(0,pos+2).length==2)
-            {
-                if(val.substring(0,pos+2).length==2)
-                    year=parseInt("20"+val.substring(0,pos+2));
-                else
-                    year=parseInt("19"+val.substring(0,pos+2));
-            }
-            if(tmstmp==true)
-            {
-                if(year<1978) return false;
-                if(year>2038||(year>2037&&day>19&&month>=1)||(year>2037&&month>1)) return false;
-                }
-        }
-        else
+    val = arrayVal.join("-");
+    var pos = 2;
+    var dtexp = new RegExp(/^([0-9]{4})-(((01|03|05|07|08|10|12)-((0[0-9])|([1-2][0-9])|(3[0-1])))|((02|04|06|09|11)-((0[0-9])|([1-2][0-9])|30)))$/);
+    if (val.length == 8) {
+        pos = 0;
+    }
+    if (dtexp.test(val)) {
+        var month = parseInt(val.substring(pos + 3, pos + 5), 10);
+        var day = parseInt(val.substring(pos + 6, pos + 8), 10);
+        var year = parseInt(val.substring(0, pos + 2), 10);
+        if (month == 2 && day > daysInFebruary(year)) {
             return false;
-        return true;
+        }
+        if (val.substring(0, pos + 2).length == 2) {
+            year = parseInt("20" + val.substring(0, pos + 2), 10);
+        }
+        if (tmstmp === true) {
+            if (year < 1978) {
+                return false;
+            }
+            if (year > 2038 || (year > 2037 && day > 19 && month >= 1) || (year > 2037 && month > 1)) {
+                return false;
+            }
+        }
+    } else {
+        return false;
+    }
+    return true;
 }
 
 /* function to check the validity of time
 * The following patterns are accepted in this validation (accepted in mysql as well)
 * 1) 2:3:4
 * 2) 2:23:43
+* 3) 2:23:43.123456
 */
 function isTime(val)
 {
-    var arrayVal=val.split(":");
-    for(var a=0;a<arrayVal.length;a++)
-    {
-        if(arrayVal[a].length==1)
-            arrayVal[a]=fractionReplace(arrayVal[a]);
+    var arrayVal = val.split(":");
+    for (var a = 0, l = arrayVal.length; a < l; a++) {
+        if (arrayVal[a].length == 1) {
+            arrayVal[a] = fractionReplace(arrayVal[a]);
+        }
     }
-    val=arrayVal.join(":");
-    tmexp=new RegExp(/^(([0-1][0-9])|(2[0-3])):((0[0-9])|([1-5][0-9])):((0[0-9])|([1-5][0-9]))$/);
-        if(!tmexp.test(val))
-            return false;
-        return true;
+    val = arrayVal.join(":");
+    var tmexp = new RegExp(/^(([0-1][0-9])|(2[0-3])):((0[0-9])|([1-5][0-9])):((0[0-9])|([1-5][0-9]))(\.[0-9]{1,6}){0,1}$/);
+    return tmexp.test(val);
 }
 
 function verificationsAfterFieldChange(urlField, multi_edit, theType)
@@ -156,11 +152,26 @@ function verificationsAfterFieldChange(urlField, multi_edit, theType)
     var evt = window.event || arguments.callee.caller.arguments[0];
     var target = evt.target || evt.srcElement;
 
+    //To generate the textbox that can take the salt
+    var new_salt_box = "<br><input type=text name=salt[multi_edit][" + multi_edit + "][" + urlField + "]" +
+        " id=salt_" + target.id + " placeholder='" + PMA_messages.strEncryptionKey + "'>";
+
+    //If AES_ENCRYPT is Selected then append the new textbox for salt
+    if (target.value == "AES_DECRYPT" || target.value == "AES_ENCRYPT") {
+        if (!($("#salt_" + target.id).length)) {
+            $("#" + target.id).parent().next("td").next("td").find("input[name*='fields']").after(new_salt_box);
+        }
+
+    } else {
+        //The value of the select is no longer AES_ENCRYPT, remove the textbox for salt
+        $("#salt_" + target.id).remove();
+    }
+
     // Unchecks the corresponding "NULL" control
-    $("input[name='fields_null[multi_edit][" + multi_edit + "][" + urlField + "]']").attr({'checked': false});
+    $("input[name='fields_null[multi_edit][" + multi_edit + "][" + urlField + "]']").prop('checked', false);
 
     // Unchecks the Ignore checkbox for the current row
-    $("input[name='insert_ignore_" + multi_edit + "']").attr({'checked': false});
+    $("input[name='insert_ignore_" + multi_edit + "']").prop('checked', false);
     var $this_input = $("input[name='fields[multi_edit][" + multi_edit + "][" + urlField + "]']");
 
     // Does this field come from datepicker?
@@ -171,38 +182,38 @@ function verificationsAfterFieldChange(urlField, multi_edit, theType)
         return true;
     }
 
-    if(target.name.substring(0,6)=="fields") {
+    if (target.name.substring(0, 6) == "fields") {
         // validate for date time
-        if(theType=="datetime"||theType=="time"||theType=="date"||theType=="timestamp") {
+        if (theType == "datetime" || theType == "time" || theType == "date" || theType == "timestamp") {
             $this_input.removeClass("invalid_value");
             var dt_value = $this_input.val();
-            if(theType=="date"){
+            if (theType == "date") {
                 if (! isDate(dt_value)) {
                     $this_input.addClass("invalid_value");
                     return false;
                 }
-            } else if(theType=="time") {
+            } else if (theType == "time") {
                 if (! isTime(dt_value)) {
                     $this_input.addClass("invalid_value");
                     return false;
                 }
-            } else if(theType=="datetime"||theType=="timestamp") {
-                tmstmp=false;
-                if(dt_value == "CURRENT_TIMESTAMP") {
+            } else if (theType == "datetime" || theType == "timestamp") {
+                var tmstmp = false;
+                if (dt_value == "CURRENT_TIMESTAMP") {
                     return true;
                 }
-                if(theType=="timestamp") {
-                    tmstmp=true;
+                if (theType == "timestamp") {
+                    tmstmp = true;
                 }
-                if(dt_value=="0000-00-00 00:00:00") {
+                if (dt_value == "0000-00-00 00:00:00") {
                     return true;
                 }
-                var dv=dt_value.indexOf(" ");
-                if(dv==-1) {
+                var dv = dt_value.indexOf(" ");
+                if (dv == -1) {
                     $this_input.addClass("invalid_value");
                     return false;
                 } else {
-                    if (! (isDate(dt_value.substring(0,dv),tmstmp) && isTime(dt_value.substring(dv+1)))) {
+                    if (! (isDate(dt_value.substring(0, dv), tmstmp) && isTime(dt_value.substring(dv + 1)))) {
                         $this_input.addClass("invalid_value");
                         return false;
                     }
@@ -210,16 +221,29 @@ function verificationsAfterFieldChange(urlField, multi_edit, theType)
             }
         }
         //validate for integer type
-        if(theType.substring(0,3) == "int"){
+        if (theType.substring(0, 3) == "int") {
             $this_input.removeClass("invalid_value");
-            if(isNaN($this_input.val())){
+            if (isNaN($this_input.val())) {
                 $this_input.addClass("invalid_value");
                 return false;
             }
         }
     }
- }
+}
  /* End of datetime validation*/
+
+
+/**
+ * Unbind all event handlers before tearing down a page
+ */
+AJAX.registerTeardown('tbl_change.js', function () {
+    $('span.open_gis_editor').die('click');
+    $("input[name='gis_data[save]']").die('click');
+    $('input.checkbox_null').die('click');
+    $('select[name="submit_type"]').unbind('change');
+    $("#insert_rows").die('change');
+    $("select[name*='funcs']").die('click');
+});
 
 /**
  * Ajax handlers for Change Table page
@@ -228,9 +252,10 @@ function verificationsAfterFieldChange(urlField, multi_edit, theType)
  * Submit Data to be inserted into the table.
  * Restart insertion with 'N' rows.
  */
-$(document).ready(function() {
+AJAX.registerOnload('tbl_change.js', function () {
+    $.datepicker.initialized = false;
 
-    $('.open_gis_editor').live('click', function(event) {
+    $('span.open_gis_editor').live('click', function (event) {
         event.preventDefault();
 
         var $span = $(this);
@@ -256,14 +281,11 @@ $(document).ready(function() {
     /**
      * Uncheck the null checkbox as geometry data is placed on the input field
      */
-    $("input[name='gis_data[save]']").live('click', function(event) {
-        var input_name = $('form#gis_data_editor_form').find("input[name='input_name']").val();   
+    $("input[name='gis_data[save]']").live('click', function (event) {
+        var input_name = $('form#gis_data_editor_form').find("input[name='input_name']").val();
         var $null_checkbox = $("input[name='" + input_name + "']").parents('tr').find('.checkbox_null');
-        $null_checkbox.attr('checked', false);
+        $null_checkbox.prop('checked', false);
     });
-
-    // these were hidden via the "hide" class
-    $('.foreign_values_anchor').show();
 
     /**
      * Handles all current checkboxes for Null; this only takes care of the
@@ -271,104 +293,65 @@ $(document).ready(function() {
      * "Continue insertion" are handled in the "Continue insertion" code
      *
      */
-    $('.checkbox_null').bind('click', function(e) {
-            nullify(
-                // use hidden fields populated by tbl_change.php
-                $(this).siblings('.nullify_code').val(),
-                $(this).closest('tr').find('input:hidden').first().val(),
-                $(this).siblings('.hashed_field').val(),
-                $(this).siblings('.multi_edit').val()
-            );
+    $('input.checkbox_null').live('click', function (e) {
+        nullify(
+            // use hidden fields populated by tbl_change.php
+            $(this).siblings('.nullify_code').val(),
+            $(this).closest('tr').find('input:hidden').first().val(),
+            $(this).siblings('.hashed_field').val(),
+            $(this).siblings('.multi_edit').val()
+        );
     });
 
+
     /**
-     * Submission of data to be inserted or updated
-     *
-     * @uses    PMA_ajaxShowMessage()
-     *
-     * This section has been deactivated. Here are the problems that I've
-     * noticed:
-     *
-     * 1. If the form contains a file upload field, the data does not reach
-     *    tbl_replace.php. This is because AJAX does not support file upload.
-     *    As a workaround I tried jquery.form.js version 2.49. The file
-     *    upload worked but afterwards the browser presented a tbl_replace.php
-     *    file and a choice to open or save.
-     *
-     * 2. This code can be called if we are editing or inserting. If editing,
-     *    the "and then" action can be "go back to this page" or "edit next
-     *    row", in which cases it makes sense to use AJAX. But the "go back
-     *    to previous page" and "insert another new row" actions, using AJAX
-     *    has no obvious advantage. If inserting, the "go back to previous"
-     *    action needs a page refresh anyway.
+     * Reset the auto_increment column to 0 when selecting any of the
+     * insert options in submit_type-dropdown. Only perform the reset
+     * when we are in edit-mode, and not in insert-mode(no previous value
+     * available).
      */
-    $("#insertFormDEACTIVATED").live('submit', function(event) {
-
-        /**
-         * @var the_form    Object referring to the insertion form
-         */
-        var $form = $(this);
-        event.preventDefault();
-
-        PMA_ajaxShowMessage();
-        PMA_prepareForAjaxRequest($form);
-
-        $.post($form.attr('action'), $form.serialize(), function(data) {
-            if (typeof data.success != 'undefined') {
-                if(data.success == true) {
-                    PMA_ajaxShowMessage(data.message);
-
-                    $("#floating_menubar")
-                    .next('div')
-                    .remove()
-                    .end()
-                    .after(data.sql_query);
-
-                    //Remove the empty notice div generated due to a NULL query passed to PMA_showMessage()
-                    var $notice_class = $("#floating_menubar").next("div").find('.notice');
-                    if ($notice_class.text() == '') {
-                        $notice_class.remove();
-                    }
-
-                    var submit_type = $form.find("select[name='submit_type']").val();
-                    if ('insert' == submit_type || 'insertignore' == submit_type) {
-                        //Clear the data in the forms
-                        $form.find('input:reset').trigger('click');
-                    }
+    $('select[name="submit_type"]').bind('change', function (e) {
+        var $table = $('table.insertRowTable');
+        var auto_increment_column = $table.find('input[name^="auto_increment"]').attr('name');
+        if (auto_increment_column) {
+            var prev_value_field = $table.find('input[name="' + auto_increment_column.replace('auto_increment', 'fields_prev') + '"]');
+            var value_field = $table.find('input[name="' + auto_increment_column.replace('auto_increment', 'fields') + '"]');
+            var previous_value = $(prev_value_field).val();
+            if (previous_value !== undefined) {
+                if ($(this).val() == 'insert' || $(this).val() == 'insertignore' || $(this).val() == 'showinsert') {
+                    $(value_field).val(0);
                 } else {
-                    PMA_ajaxShowMessage(PMA_messages['strErrorProcessingRequest'] + " : " + data.error, false);
+                    $(value_field).val(previous_value);
                 }
-            } else {
-                //happens for example when no change was done while editing
-                $('#insertForm').remove();
-                $('#floating_menubar').after('<div id="sqlqueryresults"></div>');
-                $('#sqlqueryresults').html(data);
             }
-        })
-    }) // end submission of data to be inserted into table
+        }
+    });
 
     /**
      * Continue Insertion form
      */
-    $("#insert_rows").live('change', function(event) {
+    $("#insert_rows").live('change', function (event) {
         event.preventDefault();
-
+        /**
+         * @var columnCount   Number of number of columns table has.
+         */
+        var columnCount = $("table.insertRowTable:first").find("tr").has("input[name*='fields_name']").length;
         /**
          * @var curr_rows   Number of current insert rows already on page
          */
-        var curr_rows = $(".insertRowTable").length;
+        var curr_rows = $("table.insertRowTable").length;
         /**
          * @var target_rows Number of rows the user wants
          */
         var target_rows = $("#insert_rows").val();
 
         // remove all datepickers
-        $('.datefield,.datetimefield').each(function(){
+        $('input.datefield, input.datetimefield').each(function () {
             $(this).datepicker('destroy');
         });
 
-        if(curr_rows < target_rows ) {
-            while( curr_rows < target_rows ) {
+        if (curr_rows < target_rows) {
+            while (curr_rows < target_rows) {
 
                 /**
                  * @var $last_row    Object referring to the last row
@@ -382,10 +365,10 @@ $(document).ready(function() {
 
                 //Clone the insert tables
                 $last_row
-                .clone()
+                .clone(true, true)
                 .insertBefore("#actions_panel")
                 .find('input[name*=multi_edit],select[name*=multi_edit],textarea[name*=multi_edit]')
-                .each(function() {
+                .each(function () {
 
                     var $this_element = $(this);
                     /**
@@ -402,7 +385,7 @@ $(document).ready(function() {
                     /** extract the [10] from  {@link name_parts} */
                     var old_row_index_string = this_name.match(/\[\d+\]/)[0];
                     /** extract 10 - had to split into two steps to accomodate double digits */
-                    var old_row_index = parseInt(old_row_index_string.match(/\d+/)[0]);
+                    var old_row_index = parseInt(old_row_index_string.match(/\d+/)[0], 10);
 
                     /** calculate next index i.e. 11 */
                     new_row_index = old_row_index + 1;
@@ -412,10 +395,31 @@ $(document).ready(function() {
                     var hashed_field = name_parts[1].match(/\[(.+)\]/)[1];
                     $this_element.attr('name', new_name);
 
-                    if ($this_element.is('.textfield')) {
+                    /** If element is select[name*='funcs'], update id */
+                    if ($this_element.is("select[name*='funcs']")) {
+                        var this_id = $this_element.attr("id");
+                        var id_parts = this_id.split(/\_/);
+                        var old_id_index = id_parts[1];
+                        var prevSelectedValue = $("#field_" + old_id_index + "_1").val();
+                        var new_id_index = parseInt(old_id_index) + columnCount;
+                        var new_id = 'field_' + new_id_index + '_1';
+                        $this_element.attr('id', new_id);
+                        $this_element.find("option").filter(function () {
+                            return $(this).text() === prevSelectedValue;
+                        }).attr("selected","selected");
+
+                        // If salt field is there then update its id.
+                        var nextSaltInput = $this_element.parent().next("td").next("td").find("input[name*='salt']");
+                        if (nextSaltInput.length !== 0) {
+                            nextSaltInput.attr("id", "salt_" + new_id);
+                        }
+                    }
+
+                    // handle input text fields and textareas
+                    if ($this_element.is('.textfield') || $this_element.is('.char')) {
                         // do not remove the 'value' attribute for ENUM columns
                         if ($this_element.closest('tr').find('span.column_type').html() != 'enum') {
-                            $this_element.attr('value', $this_element.closest('tr').find('span.default_value').html());
+                            $this_element.val($this_element.closest('tr').find('span.default_value').html());
                         }
                         $this_element
                         .unbind('change')
@@ -426,13 +430,13 @@ $(document).ready(function() {
                         // will change
                         .data('hashed_field', hashed_field)
                         .data('new_row_index', new_row_index)
-                        .bind('change', function(e) {
+                        .bind('change', function (e) {
                             var $changed_element = $(this);
                             verificationsAfterFieldChange(
                                 $changed_element.data('hashed_field'),
                                 $changed_element.data('new_row_index'),
                                 $changed_element.closest('tr').find('span.column_type').html()
-                                );
+                            );
                         });
                     }
 
@@ -445,82 +449,77 @@ $(document).ready(function() {
                         // will be clicked
                         .data('hashed_field', hashed_field)
                         .data('new_row_index', new_row_index)
-                        .bind('click', function(e) {
-                                var $changed_element = $(this);
-                                nullify(
-                                    $changed_element.siblings('.nullify_code').val(),
-                                    $this_element.closest('tr').find('input:hidden').first().val(),
-                                    $changed_element.data('hashed_field'),
-                                    '[multi_edit][' + $changed_element.data('new_row_index') + ']'
-                                    );
+                        .bind('click', function (e) {
+                            var $changed_element = $(this);
+                            nullify(
+                                $changed_element.siblings('.nullify_code').val(),
+                                $this_element.closest('tr').find('input:hidden').first().val(),
+                                $changed_element.data('hashed_field'),
+                                '[multi_edit][' + $changed_element.data('new_row_index') + ']'
+                            );
                         });
                     }
                 }) // end each
                 .end()
                 .find('.foreign_values_anchor')
-                .each(function() {
-                        $anchor = $(this);
+                .each(function () {
+                        var $anchor = $(this);
                         var new_value = 'rownumber=' + new_row_index;
                         // needs improvement in case something else inside
                         // the href contains this pattern
                         var new_href = $anchor.attr('href').replace(/rownumber=\d+/, new_value);
-                        $anchor.attr('href', new_href );
+                        $anchor.attr('href', new_href);
                     });
 
                 //Insert/Clone the ignore checkboxes
-                if(curr_rows == 1 ) {
+                if (curr_rows == 1) {
                     $('<input id="insert_ignore_1" type="checkbox" name="insert_ignore_1" checked="checked" />')
-                    .insertBefore(".insertRowTable:last")
-                    .after('<label for="insert_ignore_1">' + PMA_messages['strIgnore'] + '</label>');
-                }
-                else {
+                    .insertBefore("table.insertRowTable:last")
+                    .after('<label for="insert_ignore_1">' + PMA_messages.strIgnore + '</label>');
+                } else {
 
                     /**
-                     * @var last_checkbox   Object reference to the last checkbox in #insertForm
+                     * @var $last_checkbox   Object reference to the last checkbox in #insertForm
                      */
-                    var last_checkbox = $("#insertForm").children('input:checkbox:last');
+                    var $last_checkbox = $("#insertForm").children('input:checkbox:last');
 
-                    /** name of {@link last_checkbox} */
-                    var last_checkbox_name = $(last_checkbox).attr('name');
-                    /** index of {@link last_checkbox} */
-                    var last_checkbox_index = parseInt(last_checkbox_name.match(/\d+/));
-                    /** name of new {@link last_checkbox} */
-                    var new_name = last_checkbox_name.replace(/\d+/,last_checkbox_index+1);
+                    /** name of {@link $last_checkbox} */
+                    var last_checkbox_name = $last_checkbox.attr('name');
+                    /** index of {@link $last_checkbox} */
+                    var last_checkbox_index = parseInt(last_checkbox_name.match(/\d+/), 10);
+                    /** name of new {@link $last_checkbox} */
+                    var new_name = last_checkbox_name.replace(/\d+/, last_checkbox_index + 1);
 
-                    $(last_checkbox)
+                    $last_checkbox
                     .clone()
-                    .attr({'id':new_name, 'name': new_name, 'checked': true})
+                    .attr({'id': new_name, 'name': new_name})
+                    .prop('checked', true)
                     .add('label[for^=insert_ignore]:last')
                     .clone()
                     .attr('for', new_name)
                     .before('<br />')
-                    .insertBefore(".insertRowTable:last");
+                    .insertBefore("table.insertRowTable:last");
                 }
                 curr_rows++;
             }
-        // recompute tabindex for text fields and other controls at footer;
-        // IMO it's not really important to handle the tabindex for
-        // function and Null
-        var tabindex = 0;
-        $('.textfield')
-        .each(function() {
+            // recompute tabindex for text fields and other controls at footer;
+            // IMO it's not really important to handle the tabindex for
+            // function and Null
+            var tabindex = 0;
+            $('.textfield, .char, textarea')
+            .each(function () {
                 tabindex++;
                 $(this).attr('tabindex', tabindex);
                 // update the IDs of textfields to ensure that they are unique
                 $(this).attr('id', "field_" + tabindex + "_3");
             });
-        $('.control_at_footer')
-        .each(function() {
+            $('.control_at_footer')
+            .each(function () {
                 tabindex++;
                 $(this).attr('tabindex', tabindex);
             });
-        // Add all the required datepickers back
-        $('.datefield,.datetimefield').each(function(){
-            PMA_addDatepicker($(this));
-            });
-        }
-        else if( curr_rows > target_rows) {
-            while(curr_rows > target_rows) {
+        } else if (curr_rows > target_rows) {
+            while (curr_rows > target_rows) {
                 $("input[id^=insert_ignore]:last")
                 .nextUntil("fieldset")
                 .andSelf()
@@ -528,5 +527,152 @@ $(document).ready(function() {
                 curr_rows--;
             }
         }
-    })
-}, 'top.frame_content'); //end $(document).ready()
+    });
+    // Add all the required datepickers back
+    addDateTimePicker();
+
+    /**
+     * @var $function_option_dialog object holds dialog for selected function options.
+     */
+     var $function_option_dialog = null;
+
+    PMA_tooltip(
+        $("select[name*='funcs']"),
+        'select',
+        PMA_messages.strFunctionHint
+    );
+
+    $("select[name*='funcs']").live('click', function (event) {
+        if (! event.shiftKey) {
+            return false;
+        }
+
+        // Name of selected function.
+        var functionName = $(this).find("option:selected").html();
+        var currId = $(this).attr("id");
+        // Name of column.
+        var columnName = $(this).closest("tr").find("input[name*='fields_name']").val();
+        var targetRows = $("tr").has("input[value='" + columnName + "']");
+        var salt;
+        var copySalt = false;
+
+        if (functionName === 'AES_ENCRYPT' || functionName === 'AES_DECRYPT') {
+            // Dialog title.
+            var title = functionName;
+            // Dialog buttons functions.
+            var buttonOptions = {};
+            buttonOptions[PMA_messages.strYes] = function () {
+                // Go function.
+                copySalt = true;
+                salt = $("#salt_" + currId).val();
+                applyFunctionToAllRows(currId, functionName, copySalt, salt, targetRows);
+                $(this).dialog("close");
+            };
+            buttonOptions[PMA_messages.strNo] = function () {
+                copySalt = false;
+                salt = "";
+                applyFunctionToAllRows(currId, functionName, copySalt, salt, targetRows);
+                $(this).dialog("close");
+            };
+
+            // Contents of dialog.
+            var dialog = "<div>" +
+                        "<fieldset>" +
+                        "<span style='font-weight: bold;'>" +
+                        PMA_messages.strCopyEncryptionKey +
+                        "</fieldset>" +
+                        "</div>";
+
+            // Show the dialog
+            var width = parseInt(
+                (parseInt($('html').css('font-size'), 10) / 13) * 340,
+                10
+            );
+            if (! width) {
+                width = 340;
+            }
+
+            $function_option_dialog = $(dialog).dialog({
+                minWidth: width,
+                modal: true,
+                title: title,
+                buttons: buttonOptions,
+                resizable: false,
+                open: function () {
+                    // Focus the "Go" button after opening the dialog
+                    $(this).closest('.ui-dialog').find('.ui-dialog-buttonpane button:first').focus();
+                },
+                close: function () {
+                    $(this).remove();
+                }
+            });
+        }
+
+        applyFunctionToAllRows(currId, functionName, copySalt, "", targetRows);
+    });
+});
+
+function changeValueFieldType(elem, searchIndex)
+{
+    var fieldsValue = $("select#fieldID_" + searchIndex);
+    if (0 == fieldsValue.size()) {
+        return;
+    }
+
+    var type = $(elem).val();
+    if (
+        'IN (...)' == type
+        || 'NOT IN (...)' == type
+        || 'BETWEEN' == type
+        || 'NOT BETWEEN' == type
+    ) {
+        $("#fieldID_" + searchIndex).attr('multiple', '');
+    } else {
+        $("#fieldID_" + searchIndex).removeAttr('multiple');
+    }
+}
+
+function applyFunctionToAllRows(currId, functionName, copySalt, salt, targetRows)
+{
+    targetRows.each(function () {
+        var currentRowNum = /\d/.exec($(this).find("input[name*='fields_name']").attr("name"));
+/*        // Ignore the rows whose insert_ignore_* checkbox is checked.
+        var insert_ignore = $(this).closest("table.insertRowTable").prevAll("input[name*='insert_ignore']");
+        if (insert_ignore.length) {
+            if ($(insert_ignore).attr("checked")) {
+                return;
+            }
+        } */
+
+        // Append the function select list.
+        var targetSelectList = $(this).find("select[name*='funcs[multi_edit]']");
+
+        if (targetSelectList.attr("id") === currId) {
+            return;
+        }
+        targetSelectList.find("option").filter(function () {
+            return $(this).text() === functionName;
+        }).attr("selected","selected");
+
+        // Handle salt field.
+        if (functionName === 'AES_ENCRYPT' || functionName === 'AES_DECRYPT') {
+            if ($("#salt_" + targetSelectList.attr("id")).length === 0) {
+                // Get hash value.
+                var hashed_value = targetSelectList.attr("name").match(/\[multi\_edit\]\[\d\]\[(.*)\]/);
+                //To generate the textbox that can take the salt
+                var new_salt_box = "<br><input type=text name=salt[multi_edit][" + currentRowNum + "][" + hashed_value[1] + "]" +
+                    " id=salt_" + targetSelectList.attr("id") + " placeholder='" + PMA_messages.strEncryptionKey + "'>";
+                targetSelectList.parent().next("td").next("td").find("input[name*='fields']").after(new_salt_box);
+            }
+
+            if (copySalt) {
+                $("#salt_" + targetSelectList.attr("id")).attr("value", salt);
+            }
+        } else {
+            var id = targetSelectList.attr("id");
+            if ($("#salt_" + id).length) {
+                $("#salt_" + id).remove();
+            }
+        }
+    });
+}

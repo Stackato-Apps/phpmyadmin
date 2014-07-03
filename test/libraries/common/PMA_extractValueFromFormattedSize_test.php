@@ -1,38 +1,55 @@
 <?php
 /* vim: set expandtab sw=4 ts=4 sts=4: */
 /**
- * Test for PMA_extractValueFromFormattedSize from common.lib
+ ** Test for PMA_Util::extractValueFromFormattedSize from common.lib
  *
  * @package PhpMyAdmin-test
- * @version $Id: PMA_extractValueFromFormattedSize_test.php
  * @group common.lib-tests
  */
 
 /*
  * Include to test.
  */
-require_once 'libraries/common.lib.php';
+require_once 'libraries/Util.class.php';
 
-class PMA_extractValueFromFormattedSize_test extends PHPUnit_Framework_TestCase
+/**
+ ** Test for PMA_Util::extractValueFromFormattedSize from common.lib
+ *
+ * @package PhpMyAdmin-test
+ * @group common.lib-tests
+ */
+class PMA_ExtractValueFromFormattedSize_Test extends PHPUnit_Framework_TestCase
 {
-
-    function testExtractValueFromFormattedSizeNoFormat(){
-
-        $this->assertEquals(-1, PMA_extractValueFromFormattedSize(100));
+    /**
+     * Test for extractValueFromFormattedSize
+     *
+     * @param int|string $size     Size
+     * @param int        $expected Expected value
+     *
+     * @return void
+     *
+     * @dataProvider provider
+     */
+    function testExtractValueFromFormattedSize($size, $expected)
+    {
+        $this->assertEquals(
+            $expected,
+            PMA_Util::extractValueFromFormattedSize($size)
+        );
     }
 
-    function testExtractValueFromFormattedSizeGB(){
-
-        $this->assertEquals(10737418240, PMA_extractValueFromFormattedSize("10GB"));
-    }
-
-    function testExtractValueFromFormattedSizeMB(){
-
-        $this->assertEquals(15728640, PMA_extractValueFromFormattedSize("15MB"));
-    }
-
-    function testExtractValueFromFormattedSizeK(){
-
-        $this->assertEquals(262144, PMA_extractValueFromFormattedSize("256K"));
+    /**
+     * Data provider for testExtractValueFromFormattedSize
+     *
+     * @return array
+     */
+    public function provider()
+    {
+        return array(
+            array(100, -1),
+            array("10GB", 10737418240),
+            array("15MB", 15728640),
+            array("256K", 262144)
+        );
     }
 }

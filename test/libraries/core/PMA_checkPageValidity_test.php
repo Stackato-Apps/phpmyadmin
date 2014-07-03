@@ -11,7 +11,12 @@
  */
 require_once 'libraries/core.lib.php';
 
-class PMA_checkPageValidity_test extends PHPUnit_Framework_TestCase
+/**
+ * Tests for PMA_checkPageValidity() from libraries/core.lib.php
+ *
+ * @package PhpMyAdmin-test
+ */
+class PMA_CheckPageValidity_Test extends PHPUnit_Framework_TestCase
 {
     protected $goto_whitelist = array(
         'db_create.php',
@@ -21,47 +26,48 @@ class PMA_checkPageValidity_test extends PHPUnit_Framework_TestCase
         'db_search.php',
         'export.php',
         'import.php',
-        'main.php',
+        'index.php',
         'pdf_pages.php',
         'pdf_schema.php',
         'querywindow.php',
         'server_binlog.php',
         'server_variables.php',
         'sql.php',
-        'tbl_alter.php',
         'tbl_select.php',
         'transformation_overview.php',
         'transformation_wrapper.php',
         'user_password.php',
     );
 
-    function testGotoNowhere(){
-        $page = null;
-        $this->assertFalse(PMA_checkPageValidity($page, null));
+    /**
+     * Test for PMA_checkPageValidity
+     *
+     * @param string     $page      Page
+     * @param array|null $whiteList White list
+     * @param int        $expected  Expected value
+     *
+     * @return void
+     *
+     * @dataProvider provider
+     */
+    function testGotoNowhere($page, $whiteList, $expected)
+    {
+        $this->assertTrue($expected === PMA_checkPageValidity($page, $whiteList));
     }
 
-    function testGotoWhitelist(){
-        $page = 'export.php';
-
-        $this->assertTrue(PMA_checkPageValidity($page, $this->goto_whitelist));
+    /**
+     * Data provider for testGotoNowhere
+     *
+     * @return array
+     */
+    public function provider()
+    {
+        return array(
+            array(null, null, false),
+            array('export.php', $this->goto_whitelist, true),
+            array('shell.php', $this->goto_whitelist, false),
+            array('index.php?sql.php&test=true', $this->goto_whitelist, true),
+            array('index.php%3Fsql.php%26test%3Dtrue', $this->goto_whitelist, true),
+        );
     }
-
-    function testGotoNotInWhitelist(){
-        $page = 'shell.php';
-
-        $this->assertFalse(PMA_checkPageValidity($page, $this->goto_whitelist));
-    }
-
-    function testGotoWhitelistPage(){
-        $page = 'main.php?sql.php&test=true';
-
-        $this->assertTrue(PMA_checkPageValidity($page, $this->goto_whitelist));
-    }
-
-    function testGotoWhitelistEncodedPage(){
-        $page = 'main.php%3Fsql.php%26test%3Dtrue';
-
-        $this->assertTrue(PMA_checkPageValidity($page, $this->goto_whitelist));
-    }
-
 }

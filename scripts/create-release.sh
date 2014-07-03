@@ -19,7 +19,7 @@ then
   echo "Usages:"
   echo "  create-release.sh <version> <from_branch> [--tag]"
   echo ""
-  echo "If --tag is specified, relase tag is automatically created"
+  echo "If --tag is specified, release tag is automatically created"
   echo ""
   echo "Examples:"
   echo "  create-release.sh 2.9.0-rc1 QA_2_9"
@@ -36,7 +36,7 @@ ensure_local_branch() {
 }
 
 # Marks current head of given branch as head of other branch
-# Used for STABLE/TESTING tracking
+# Used for STABLE tracking
 mark_as_release() {
     branch=$1
     rel_branch=$2
@@ -57,9 +57,11 @@ cat <<END
 Please ensure you have incremented rc count or version in the repository :
      - in libraries/Config.class.php PMA_Config::__constructor() the line
           " \$this->set( 'PMA_VERSION', '$version' ); "
-     - in Documentation.html the 2 lines
+     - in Documentation.html (if exists) the 2 lines
           " <title>phpMyAdmin $version - Documentation</title> "
           " <h1>phpMyAdmin $version Documentation</h1> "
+     - in doc/conf.py (if exists) the line
+          " version = '$version' "
      - in README
 
 Continue (y/n)?
@@ -92,8 +94,11 @@ if ! grep -q "'PMA_VERSION', '$version'" libraries/Config.class.php ; then
     echo "There seems to be wrong version in libraries/Config.class.php!"
     exit 2
 fi
-if ! grep -q "phpMyAdmin $version - Documentation" Documentation.html ; then
+if test -f Documentation.html && ! grep -q "phpMyAdmin $version - Documentation" Documentation.html ; then
     echo "There seems to be wrong version in Documentation.html"
+fi
+if test -f doc/conf.py && ! grep -q "version = '$version'" doc/conf.py ; then
+    echo "There seems to be wrong version in doc/conf.py"
     exit 2
 fi
 if ! grep -q "Version $version\$" README ; then
@@ -104,9 +109,14 @@ fi
 # Cleanup release dir
 LC_ALL=C date -u > RELEASE-DATE-${version}
 
-# Building Documentation.txt
-echo "* Generating Documentation.txt"
-LC_ALL=C w3m -dump Documentation.html > Documentation.txt
+# Building documentation
+echo "* Generating documentation"
+if [ -f doc/conf.py ] ; then
+    LC_ALL=C make -C doc html
+    find doc -name '*.pyc' -print0 | xargs -0 -r rm -f
+else
+    LC_ALL=C w3m -dump Documentation.html > Documentation.txt
+fi
 
 # Check for gettext support
 if [ -d po ] ; then
@@ -120,10 +130,9 @@ if [ -d po ] ; then
     rm -rf po
 fi
 
-if [ -f ./scripts/compress-js ] ; then
-    echo "* Compressing javascript files"
-    ./scripts/compress-js
-    rm -rf sources
+if [ -f ./scripts/line-counts.sh ] ; then
+    echo "* Generating line counts"
+    ./scripts/line-counts.sh
 fi
 
 echo "* Removing unneeded files"
@@ -132,8 +141,14 @@ echo "* Removing unneeded files"
 # if someone runs /test/wui.php and there are test failures
 rm -rf test
 
+# Remove phpcs coding standard definition
+rm -rf PMAStandard
+
 # Testsuite setup
-rm -f build.xml phpunit.xml.dist
+rm -f build.xml phpunit.xml.dist .travis.yml .jshintrc
+
+# Remove readme for github
+rm -f README.rst
 
 # Remove git metadata
 rm -rf .git
@@ -159,7 +174,7 @@ for kit in $KITS ; do
         rm -rf scripts/google-javascript-compiler/
 
         # Remove scripts which are not useful for user
-        for s in compress-js create-release.sh generate-mo mergepo.py php2gettext.sh remove_control_m.sh update-po upload-release pending-po pendingpo.py ; do
+        for s in generate-sprites advisor2po lang-cleanup.sh locales-contributors remove-incomplete-mo compress-js create-release.sh generate-mo remove_control_m.sh update-po upload-release ; do
             rm -f scripts/$s
         done
     fi
@@ -240,18 +255,15 @@ if [ $# -gt 0 ] ; then
                 echo "* Tagging release as $tagname"
                 git tag -a -m "Released $version" $tagname $branch
                 if echo $version | grep -q '^2\.11\.' ; then
-                    echo '* 2.11 branch, no STABLE/TESTING update'
+                    echo '* 2.11 branch, no STABLE update'
                 elif echo $version | grep -q '^3\.3\.' ; then
-                    echo '* 3.3 branch, no STABLE/TESTING update'
+                    echo '* 3.3 branch, no STABLE update'
+                elif echo $version | grep -q '^3\.4\.' ; then
+                    echo '* 3.4 branch, no STABLE update'
+                elif echo $version | grep '[\-]' ; then
+                    echo '* no STABLE update'
                 else
-                    if echo $version | grep '[a-z_-]' ; then
-                        mark_as_release $branch TESTING
-                    else
-                        # We update both branches here
-                        # As it does not make sense to have older testing than stable
-                        mark_as_release $branch TESTING
-                        mark_as_release $branch STABLE
-                    fi
+                    mark_as_release $branch STABLE
                     git checkout master
                 fi
                 echo "   Dont forget to push tags using: git push --tags"
@@ -274,7 +286,7 @@ Todo now:
 1. If not already done, tag the repository with the new revision number
    for a plain release or a release candidate:
     version 2.7.0 gets two tags: RELEASE_2_7_0 and STABLE
-    version 2.7.1-rc1 gets RELEASE_2_7_1RC1 and TESTING
+    version 2.7.1-rc1 gets RELEASE_2_7_1RC1
 
  2. prepare a release/phpMyAdmin-$version-notes.html explaining in short the goal of
     this release and paste into it the ChangeLog for this release
@@ -286,20 +298,20 @@ Todo now:
  6. send a short mail (with list of major changes) to
         phpmyadmin-devel@lists.sourceforge.net
         phpmyadmin-news@lists.sourceforge.net
-        phpmyadmin-users@lists.sourceforge.net
 
     Don't forget to update the Description section in the announcement,
-    based on Documentation.html.
+    based on documentation.
 
  7. increment rc count or version in the repository :
         - in libraries/Config.class.php PMA_Config::__constructor() the line
               " \$this->set( 'PMA_VERSION', '2.7.1-dev' ); "
-        - in Documentation.html the 2 lines
+        - in Documentation.html (if it exists) the 2 lines
               " <title>phpMyAdmin 2.2.2-rc1 - Documentation</title> "
               " <h1>phpMyAdmin 2.2.2-rc1 Documentation</h1> "
+        - in doc/conf.py (if it exists) the line
+              " version = '2.7.1-dev' "
 
- 8. add a group for bug tracking this new version, at
-    https://sourceforge.net/tracker/admin/index.php?group_id=23067&atid=377408&add_group=1
+ 8. add a milestone for this new version in the bugs tickets, at https://sourceforge.net/p/phpmyadmin/bugs/milestones
 
  9. the end :-)
 

@@ -18,128 +18,105 @@
  * Change charset
  */
 
-$(document).ready(function() {
+/**
+ * Unbind all event handlers before tearing down a page
+ */
+AJAX.registerTeardown('db_operations.js', function () {
+    $("#rename_db_form.ajax").die('submit');
+    $("#copy_db_form.ajax").die('submit');
+    $("#change_db_charset_form.ajax").die('submit');
+});
+
+AJAX.registerOnload('db_operations.js', function () {
 
     /**
      * Ajax event handlers for 'Rename Database'
-     *
-     * @uses    $.PMA_confirm()
-     * @uses    PMA_ajaxShowUser()
-     * @see     $cfg['AjaxEnable']
      */
-    $("#rename_db_form.ajax").live('submit', function(event) {
+    $("#rename_db_form.ajax").live('submit', function (event) {
         event.preventDefault();
+
+        var old_db_name = PMA_commonParams.get('db');
+        var new_db_name = $('#new_db_name').val();
+
+        if (new_db_name == old_db_name) {
+            PMA_ajaxShowMessage(PMA_messages.strDropDatabaseStrongWarning);
+            return false;
+        }
 
         var $form = $(this);
 
-        var question = escapeHtml('CREATE DATABASE ' + $('#new_db_name').val() + ' / DROP DATABASE ' + window.parent.db);
+        var question = escapeHtml('CREATE DATABASE ' + new_db_name + ' / DROP DATABASE ' + old_db_name);
 
         PMA_prepareForAjaxRequest($form);
-        /**
-         * @var button_options  Object containing options for jQueryUI dialog buttons
-         */
-        var button_options = {};
-        button_options[PMA_messages['strYes']] = function() {
-                                                    $(this).dialog("close").remove();
-                                                    window.parent.refreshMain();
-                                                    window.parent.refreshNavigation();
-                                                };
-        button_options[PMA_messages['strNo']] = function() { $(this).dialog("close").remove(); }
 
-        $form.PMA_confirm(question, $form.attr('action'), function(url) {
-            PMA_ajaxShowMessage(PMA_messages['strRenamingDatabases'], false);
-
-            $.get(url, $("#rename_db_form").serialize() + '&is_js_confirmed=1', function(data) {
-                if(data.success == true) {
-                    
+        $form.PMA_confirm(question, $form.attr('action'), function (url) {
+            PMA_ajaxShowMessage(PMA_messages.strRenamingDatabases, false);
+            $.get(url, $("#rename_db_form").serialize() + '&is_js_confirmed=1', function (data) {
+                if (data.success === true) {
                     PMA_ajaxShowMessage(data.message);
+                    PMA_commonParams.set('db', data.newname);
 
-                    window.parent.db = data.newname;
-
-                    $("#floating_menubar")
-                    .next('div')
-                    .remove()
-                    .end()
-                    .after(data.sql_query);
-
-                    //Remove the empty notice div generated due to a NULL query passed to PMA_showMessage()
-                    var $notice_class = $("#floating_menubar").next("div").find('.notice');
-                    if ($notice_class.text() == '') {
-                        $notice_class.remove();
-                    }
-
-                    $("<span>" + PMA_messages['strReloadDatabase'] + "?</span>").dialog({
-                        buttons: button_options
-                    }) //end dialog options
-                }
-                else {
+                    PMA_reloadNavigation(function () {
+                        $('#pma_navigation_tree')
+                            .find("a:not('.expander')")
+                            .each(function (index) {
+                                var $thisAnchor = $(this);
+                                if ($thisAnchor.text() == data.newname) {
+                                    // simulate a click on the new db name
+                                    // in navigation
+                                    $thisAnchor.trigger('click');
+                                }
+                            });
+                    });
+                } else {
                     PMA_ajaxShowMessage(data.error, false);
                 }
-            }) // end $.get()
-        })
+            }); // end $.get()
+        });
     }); // end Rename Database
 
     /**
      * Ajax Event Handler for 'Copy Database'
-     *
-     * @uses    PMA_ajaxShowMessage()
-     * @see     $cfg['AjaxEnable']
      */
-    $("#copy_db_form.ajax").live('submit', function(event) {
+    $("#copy_db_form.ajax").live('submit', function (event) {
         event.preventDefault();
-
-        PMA_ajaxShowMessage(PMA_messages['strCopyingDatabase'], false);
-
+        PMA_ajaxShowMessage(PMA_messages.strCopyingDatabase, false);
         var $form = $(this);
-        
         PMA_prepareForAjaxRequest($form);
-
-        $.get($form.attr('action'), $form.serialize(), function(data) {
+        $.get($form.attr('action'), $form.serialize(), function (data) {
             // use messages that stay on screen
-            $('.success').fadeOut();
-            $('.error').fadeOut();
-            if(data.success == true) {
-                PMA_ajaxShowMessage(data.message);
-                if( $("#checkbox_switch").is(":checked")) {
-                    window.parent.db = data.newname;
-                    window.parent.refreshMain();
-                    window.parent.refreshNavigation();
-               } else {
-                    // Here we force a refresh because the navigation
-                    // frame url is not changing so this function would
-                    // not refresh it
-                    window.parent.refreshNavigation(true);
-               }
-            }
-            else {
+            $('div.success, div.error').fadeOut();
+            if (data.success === true) {
+                if ($("#checkbox_switch").is(":checked")) {
+                    PMA_commonParams.set('db', data.newname);
+                    PMA_commonActions.refreshMain(false, function () {
+                        PMA_ajaxShowMessage(data.message);
+                    });
+                } else {
+                    PMA_commonParams.set('db', data.db);
+                    PMA_ajaxShowMessage(data.message);
+                }
+                PMA_reloadNavigation();
+            } else {
                 PMA_ajaxShowMessage(data.error, false);
             }
-        }) // end $.get
-    }) // end copy database
+        }); // end $.get
+    }); // end copy database
 
     /**
      * Ajax Event handler for 'Change Charset' of the database
-     *
-     * @uses    PMA_ajaxShowMessage()
-     * @see     $cfg['AjaxEnable']
      */
-    $("#change_db_charset_form.ajax").live('submit', function(event) {
+    $("#change_db_charset_form.ajax").live('submit', function (event) {
         event.preventDefault();
-
         var $form = $(this);
-
         PMA_prepareForAjaxRequest($form);
-
-        PMA_ajaxShowMessage(PMA_messages['strChangingCharset']);
-
-        $.get($form.attr('action'), $form.serialize() + "&submitcollation=" + $form.find("input[name=submitcollation]").attr('value'), function(data) {
-            if(data.success == true) {
+        PMA_ajaxShowMessage(PMA_messages.strChangingCharset);
+        $.get($form.attr('action'), $form.serialize() + "&submitcollation=1", function (data) {
+            if (data.success === true) {
                 PMA_ajaxShowMessage(data.message);
-            }
-            else {
+            } else {
                 PMA_ajaxShowMessage(data.error, false);
             }
-        }) // end $.get()
-    }) // end change charset
-    
-}, 'top.frame_content');
+        }); // end $.get()
+    }); // end change charset
+});

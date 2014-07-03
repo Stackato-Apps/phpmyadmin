@@ -9,11 +9,21 @@
 /*
  * Include to test.
  */
-require_once 'libraries/common.lib.php';
+require_once 'libraries/Util.class.php';
 require_once 'libraries/File.class.php';
 
-class PMA_File_test extends PHPUnit_Framework_TestCase
+/**
+ * tests for PMA_File class
+ *
+ * @package PhpMyAdmin-test
+ */
+class PMA_File_Test extends PHPUnit_Framework_TestCase
 {
+    /**
+     * Setup function for test cases
+     *
+     * @return void
+     */
     public function setup()
     {
         $GLOBALS['cfg']['BZipDump'] = true;
@@ -23,6 +33,12 @@ class PMA_File_test extends PHPUnit_Framework_TestCase
     }
 
     /**
+     * Test for PMA_File::getCompression
+     *
+     * @param string $file file string
+     * @param string $mime expected mime
+     *
+     * @return void
      * @dataProvider compressedFiles
      */
     public function testMIME($file, $mime)
@@ -32,22 +48,12 @@ class PMA_File_test extends PHPUnit_Framework_TestCase
     }
 
     /**
-     * @dataProvider compressedFiles
-     */
-    public function testContent($file, $mime)
-    {
-        $orig = file_get_contents('./test/test_data/test.file');
-        $file = new PMA_File($file);
-        $file->setDecompressContent(true);
-        $this->assertTrue($file->open());
-        if ($mime == 'application/zip') {
-            $this->assertEquals($orig, $file->content_uncompressed);
-        } else {
-            $this->assertEquals($orig, $file->getNextChunk());
-        }
-    }
-
-    /**
+     * Test for PMA_File::getContent
+     *
+     * @param string $file file string
+     * @param string $mime expected mime
+     *
+     * @return void
      * @dataProvider compressedFiles
      */
     public function testBinaryContent($file, $mime)
@@ -57,7 +63,13 @@ class PMA_File_test extends PHPUnit_Framework_TestCase
         $this->assertEquals($data, $file->getContent());
     }
 
-    public function compressedFiles() {
+    /**
+     * Data provider for tests
+     *
+     * @return array Test data
+     */
+    public function compressedFiles()
+    {
         return array(
             array('./test/test_data/test.gz', 'application/gzip'),
             array('./test/test_data/test.bz2', 'application/bzip2'),

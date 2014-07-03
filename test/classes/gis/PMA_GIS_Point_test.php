@@ -1,4 +1,5 @@
 <?php
+/* vim: set expandtab sw=4 ts=4 sts=4: */
 /**
  * Test for PMA_GIS_Point
  *
@@ -6,11 +7,14 @@
  */
 
 require_once 'PMA_GIS_Geom_test.php';
-require_once 'libraries/gis/pma_gis_geometry.php';
-require_once 'libraries/gis/pma_gis_point.php';
+require_once 'libraries/gis/GIS_Geometry.class.php';
+require_once 'libraries/gis/GIS_Point.class.php';
+require_once 'libraries/tcpdf/tcpdf.php';
 
 /**
  * Tests for PMA_GIS_Point class.
+ *
+ * @package PhpMyAdmin-test
  */
 class PMA_GIS_PointTest extends PMA_GIS_GeomTest
 {
@@ -25,7 +29,7 @@ class PMA_GIS_PointTest extends PMA_GIS_GeomTest
      * This method is called before a test is executed.
      *
      * @access protected
-     * @return nothing
+     * @return void
      */
     protected function setUp()
     {
@@ -37,7 +41,7 @@ class PMA_GIS_PointTest extends PMA_GIS_GeomTest
      * This method is called after a test is executed.
      *
      * @access protected
-     * @return nothing
+     * @return void
      */
     protected function tearDown()
     {
@@ -92,7 +96,7 @@ class PMA_GIS_PointTest extends PMA_GIS_GeomTest
      * @param string $shape    expected shape in WKT
      *
      * @dataProvider providerForTestGetShape
-     * @return nothing
+     * @return void
      */
     public function testGetShape($row_data, $shape)
     {
@@ -161,6 +165,200 @@ class PMA_GIS_PointTest extends PMA_GIS_GeomTest
                     'minY' => 35,
                     'maxY' => 35,
                 )
+            )
+        );
+    }
+
+    /**
+     * test case for prepareRowAsPng() method
+     *
+     * @param string $spatial     GIS POINT object
+     * @param string $label       label for the GIS POINT object
+     * @param string $point_color color for the GIS POINT object
+     * @param array  $scale_data  array containing data related to scaling
+     * @param object $image       image object
+     * @param string $output      expeected output
+     *
+     * @return void
+     * @dataProvider providerForPrepareRowAsPng
+     */
+    public function testPrepareRowAsPng(
+        $spatial, $label, $point_color, $scale_data, $image, $output
+    ) {
+        $return = $this->object->prepareRowAsPng(
+            $spatial, $label, $point_color, $scale_data, $image
+        );
+        /* TODO: this never fails */
+        $this->assertTrue(true);
+    }
+
+    /**
+     * data provider for testPrepareRowAsPng() test case
+     *
+     * @return array test data for testPrepareRowAsPng() test case
+     */
+    public function providerForPrepareRowAsPng()
+    {
+        return array(
+            array(
+                'POINT(12 35)',
+                'image',
+                '#B02EE0',
+                array(
+                    'x' => 12,
+                    'y' => 69,
+                    'scale' => 2,
+                    'height' => 150
+                ),
+                imagecreatetruecolor('120', '150'),
+                ''
+            )
+        );
+    }
+
+    /**
+     * test case for prepareRowAsPdf() method
+     *
+     * @param string $spatial     GIS POINT object
+     * @param string $label       label for the GIS POINT object
+     * @param string $point_color color for the GIS POINT object
+     * @param array  $scale_data  array containing data related to scaling
+     * @param object $pdf         TCPDF instance
+     *
+     * @return void
+     * @dataProvider providerForPrepareRowAsPdf
+     */
+    public function testPrepareRowAsPdf(
+        $spatial, $label, $point_color, $scale_data, $pdf
+    ) {
+        $return = $this->object->prepareRowAsPdf(
+            $spatial, $label, $point_color, $scale_data, $pdf
+        );
+        $this->assertInstanceOf('TCPDF', $return);
+    }
+
+    /**
+     * data provider for prepareRowAsPdf() test case
+     *
+     * @return array test data for prepareRowAsPdf() test case
+     */
+    public function providerForPrepareRowAsPdf()
+    {
+        return array(
+            array(
+                'POINT(12 35)',
+                'pdf',
+                '#B02EE0',
+                array(
+                    'x' => 12,
+                    'y' => 69,
+                    'scale' => 2,
+                    'height' => 150
+                ),
+                new TCPDF(),
+            )
+        );
+    }
+
+    /**
+     * test case for prepareRowAsSvg() method
+     *
+     * @param string $spatial     GIS POINT object
+     * @param string $label       label for the GIS POINT object
+     * @param string $point_color color for the GIS POINT object
+     * @param array  $scale_data  array containing data related to scaling
+     * @param string $output      expected output
+     *
+     * @return void
+     * @dataProvider providerForPrepareRowAsSvg
+     */
+    public function testPrepareRowAsSvg(
+        $spatial, $label, $point_color, $scale_data, $output
+    ) {
+        $this->assertEquals(
+            $output,
+            $this->object->prepareRowAsSvg(
+                $spatial, $label, $point_color, $scale_data
+            )
+        );
+    }
+
+    /**
+     * data provider for prepareRowAsSvg() test case
+     *
+     * @return array test data for prepareRowAsSvg() test case
+     */
+    public function providerForPrepareRowAsSvg()
+    {
+        return array(
+            array(
+                'POINT(12 35)',
+                'svg',
+                '#B02EE0',
+                array(
+                    'x' => 12,
+                    'y' => 69,
+                    'scale' => 2,
+                    'height' => 150
+                ),
+                ''
+            )
+        );
+    }
+
+    /**
+     * test case for prepareRowAsOl() method
+     *
+     * @param string $spatial     GIS POINT object
+     * @param int    $srid        spatial reference ID
+     * @param string $label       label for the GIS POINT object
+     * @param string $point_color color for the GIS POINT object
+     * @param array  $scale_data  array containing data related to scaling
+     * @param string $output      expected output
+     *
+     * @return void
+     * @dataProvider providerForPrepareRowAsOl
+     */
+    public function testPrepareRowAsOl(
+        $spatial, $srid, $label, $point_color, $scale_data, $output
+    ) {
+        $this->assertEquals(
+            $output,
+            $this->object->prepareRowAsOl(
+                $spatial, $srid, $label, $point_color, $scale_data
+            )
+        );
+    }
+
+    /**
+     * data provider for testPrepareRowAsOl() test case
+     *
+     * @return array test data for testPrepareRowAsOl() test case
+     */
+    public function providerForPrepareRowAsOl()
+    {
+        return array(
+            array(
+                'POINT(12 35)',
+                4326,
+                'Ol',
+                '#B02EE0',
+                array(
+                    'minX' => '0',
+                    'minY' => '0',
+                    'maxX' => '1',
+                    'maxY' => '1',
+                ),
+                'bound = new OpenLayers.Bounds(); bound.extend(new OpenLayers.'
+                . 'LonLat(0, 0).transform(new OpenLayers.Projection("EPSG:4326"), '
+                . 'map.getProjectionObject())); bound.extend(new OpenLayers.LonLat'
+                . '(1, 1).transform(new OpenLayers.Projection("EPSG:4326"), '
+                . 'map.getProjectionObject()));vectorLayer.addFeatures(new Open'
+                . 'Layers.Feature.Vector((new OpenLayers.Geometry.Point(12,35)).'
+                . 'transform(new OpenLayers.Projection("EPSG:4326"), map.get'
+                . 'ProjectionObject()), null, {"pointRadius":3,"fillColor":"#ffffff"'
+                . ',"strokeColor":"#B02EE0","strokeWidth":2,"label":"Ol","labelY'
+                . 'Offset":-8,"fontSize":10}));'
             )
         );
     }

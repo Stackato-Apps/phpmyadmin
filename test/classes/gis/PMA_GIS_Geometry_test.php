@@ -1,14 +1,17 @@
 <?php
+/* vim: set expandtab sw=4 ts=4 sts=4: */
 /**
  * Test for PMA_GIS_Geometry
  *
  * @package PhpMyAdmin-test
  */
 
-require_once 'libraries/gis/pma_gis_geometry.php';
+require_once 'libraries/gis/GIS_Geometry.class.php';
 
 /**
  * Tests for PMA_GIS_Geometry class
+ *
+ * @package PhpMyAdmin-test
  */
 class PMA_GIS_GeometryTest extends PHPUnit_Framework_TestCase
 {
@@ -22,7 +25,7 @@ class PMA_GIS_GeometryTest extends PHPUnit_Framework_TestCase
      * This method is called before a test is executed.
      *
      * @access protected
-     * @return nothing
+     * @return void
      */
     protected function setUp()
     {
@@ -34,7 +37,7 @@ class PMA_GIS_GeometryTest extends PHPUnit_Framework_TestCase
      * This method is called after a test is executed.
      *
      * @access protected
-     * @return nothing
+     * @return void
      */
     protected function tearDown()
     {
@@ -65,7 +68,7 @@ class PMA_GIS_GeometryTest extends PHPUnit_Framework_TestCase
      * @param array  $output    Expected output array
      *
      * @dataProvider providerForTestSetMinMax
-     * @return nothing
+     * @return void
      */
     public function testSetMinMax($point_set, $min_max, $output)
     {
@@ -121,7 +124,7 @@ class PMA_GIS_GeometryTest extends PHPUnit_Framework_TestCase
      * @param string $output Expected output
      *
      * @dataProvider providerForTestGenerateParams
-     * @return nothing
+     * @return void
      */
     public function testGenerateParams($value, $output)
     {
@@ -175,7 +178,7 @@ class PMA_GIS_GeometryTest extends PHPUnit_Framework_TestCase
      * @param array   $output     Expected output
      *
      * @dataProvider providerForTestExtractPoints
-     * @return nothing
+     * @return void
      */
     public function testExtractPoints($point_set, $scale_data, $linear, $output)
     {
@@ -241,6 +244,99 @@ class PMA_GIS_GeometryTest extends PHPUnit_Framework_TestCase
                     2 => array('', ''),
                 ),
             ),
+        );
+    }
+
+    /**
+     * test case for getBoundsForOl() method
+     *
+     * @param string $srid       spatial reference ID
+     * @param array  $scale_data data related to scaling
+     * @param string $output     rxpected output
+     *
+     * @return void
+     * @dataProvider providerForTestGetBoundsForOl
+     */
+    public function testGetBoundsForOl($srid, $scale_data, $output)
+    {
+        $this->assertEquals(
+            $this->_callProtectedFunction(
+                'getBoundsForOl',
+                array($srid, $scale_data)
+            ),
+            $output
+        );
+    }
+
+    /**
+     * data provider for testGetBoundsForOl() test case
+     *
+     * @return array test data for the testGetBoundsForOl() test case
+     */
+    public function providerForTestGetBoundsForOl()
+    {
+        return array(
+            array(
+                4326,
+                array(
+                    'minX' => '0',
+                    'minY' => '0',
+                    'maxX' => '1',
+                    'maxY' => '1',
+                ),
+                'bound = new OpenLayers.Bounds(); '
+                    . 'bound.extend(new OpenLayers.LonLat(0, 0).transform('
+                    . 'new OpenLayers.Projection("EPSG:4326"), '
+                    . 'map.getProjectionObject())); '
+                    . 'bound.extend(new OpenLayers.LonLat(1, 1).transform('
+                    . 'new OpenLayers.Projection("EPSG:4326"), '
+                    . 'map.getProjectionObject()));'
+            )
+
+        );
+    }
+
+    /**
+     * test case for getPolygonArrayForOpenLayers() method
+     *
+     * @param array  $polygons x and y coordinate pairs for each polygon
+     * @param string $srid     spatial reference id
+     * @param string $output   expected output
+     *
+     * @return void
+     * @dataProvider providerForTestGetPolygonArrayForOpenLayers
+     */
+    public function testGetPolygonArrayForOpenLayers($polygons, $srid, $output)
+    {
+        $this->assertEquals(
+            $this->_callProtectedFunction(
+                'getPolygonArrayForOpenLayers',
+                array($polygons, $srid)
+            ),
+            $output
+        );
+    }
+
+    /**
+     * data provider for testGetPolygonArrayForOpenLayers() test case
+     *
+     * @return array test data for testGetPolygonArrayForOpenLayers() test case
+     */
+    public function providerForTestGetPolygonArrayForOpenLayers()
+    {
+        return array(
+            array(
+                array('Triangle'),
+                4326,
+                'new Array('
+                    . 'new OpenLayers.Geometry.Polygon('
+                    . 'new Array('
+                    . 'new OpenLayers.Geometry.LinearRing('
+                    . 'new Array('
+                    . '(new OpenLayers.Geometry.Point(,)).transform('
+                    . 'new OpenLayers.Projection("EPSG:4326"), '
+                    . 'map.getProjectionObject()))))))'
+            )
         );
     }
 }
