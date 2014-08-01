@@ -1,0 +1,19 @@
+applications:
+- name: phpmyadmin
+  framework:
+    name: php
+  instances: 1
+  mem: 128
+  runtime: php
+  services:
+    # an empty default database
+    # comment out if desired and bind existing databases
+    # using `stackato bind-service ...`
+    ${name}-db:
+      type: mysql
+  stackato:
+    env:
+      PMA_USERNAME:
+        default: stackato
+      PMA_PASSWORD:
+        default: changeme
