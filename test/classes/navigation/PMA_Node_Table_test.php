@@ -26,7 +26,6 @@ class Node_Table_Test extends PHPUnit_Framework_TestCase
     public function setup()
     {
         $GLOBALS['server'] = 0;
-        $GLOBALS['token'] = 'token';
         $GLOBALS['cfg']['NavigationTreeDefaultTabTable'] = 'b_browse';
         $GLOBALS['cfg']['DefaultTabTable'] = 'sql.php';
         $GLOBALS['cfg']['MaxNavigationItems'] = 250;
@@ -70,7 +69,7 @@ class Node_Table_Test extends PHPUnit_Framework_TestCase
     {
         $GLOBALS['cfg']['NavigationTreeDefaultTabTable'] = $target;
         $node = PMA_NodeFactory::getInstance('Node_Table');
-        $this->assertContains($imageName, $node->icon);
+        $this->assertContains($imageName, $node->icon[0]);
     }
 
     /**

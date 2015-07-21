@@ -38,6 +38,9 @@ class PMA_DBI_Mysql_Test extends PHPUnit_Framework_TestCase
      */
     protected function setUp()
     {
+        if (! extension_loaded('mysql')) {
+            $this->markTestSkipped('The MySQL extension is not available.');
+        }
         $GLOBALS['cfg']['Server']['ssl'] = true;
         $GLOBALS['cfg']['PersistentConnections'] = false;
         $GLOBALS['cfg']['Server']['compress'] = true;
@@ -252,11 +255,12 @@ class PMA_DBI_Mysql_Test extends PHPUnit_Framework_TestCase
      */
     public function testSelectDb()
     {
+        $this->markTestIncomplete('Not testing anything');
         //$link is empty
         $GLOBALS['userlink'] = null;
         $this->assertEquals(
             false,
-            $this->object->selectDb("PMA")
+            $this->object->selectDb("PMA", null)
         );
     }
 
@@ -272,12 +276,12 @@ class PMA_DBI_Mysql_Test extends PHPUnit_Framework_TestCase
         //PHP's 'mysql' extension does not support multi_queries
         $this->assertEquals(
             false,
-            $this->object->moreResults()
+            $this->object->moreResults(null)
         );
         //PHP's 'mysql' extension does not support multi_queries
         $this->assertEquals(
             false,
-            $this->object->nextResult()
+            $this->object->nextResult(null)
         );
     }
 
@@ -322,7 +326,7 @@ class PMA_DBI_Mysql_Test extends PHPUnit_Framework_TestCase
     {
         $this->assertEquals(
             false,
-            $this->object->storeResult()
+            $this->object->storeResult(null)
         );
     }
 }

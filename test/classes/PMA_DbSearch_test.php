@@ -81,6 +81,18 @@ class PMA_DbSearch_Test extends PHPUnit_Framework_TestCase
      */
     public function testGetSearchSqls()
     {
+        //mock DBI
+        $dbi = $this->getMockBuilder('PMA_DatabaseInterface')
+            ->disableOriginalConstructor()
+            ->getMock();
+
+        $dbi->expects($this->any())
+            ->method('getColumns')
+            ->with('pma', 'table1')
+            ->will($this->returnValue(array()));
+
+        $GLOBALS['dbi'] = $dbi;
+
         $this->assertEquals(
             array (
                 'select_columns' => 'SELECT *  FROM `pma`.`table1` WHERE FALSE',
@@ -156,18 +168,23 @@ class PMA_DbSearch_Test extends PHPUnit_Framework_TestCase
                 . '</td><td><a name="browse_search" class="ajax" '
                 . 'href="sql.php?db=pma&amp;table'
                 . '=table1&amp;goto=db_sql.php&amp;pos=0&amp;is_js_confirmed=0&amp;'
-                . 'sql_query=column1&amp;server=0&amp;lang=en&amp;token=token" '
+                . 'sql_query=column1&amp;server=0&amp;lang=en&amp;'
+                . 'collation_connection=utf-8&amp;token=token" '
                 . 'onclick="loadResult(\'sql.php?db=pma&amp;table=table1&amp;goto='
                 . 'db_sql.php&amp;pos=0&amp;is_js_confirmed=0&amp;sql_query=column1'
-                . '&amp;server=0&amp;lang=en&amp;token=token\',\'table1\',\'db=pma'
-                . '&amp;table=table1&amp;server=0&amp;lang=en&amp;token=token\');'
+                . '&amp;server=0&amp;lang=en&amp;collation_connection=utf-8'
+                . '&amp;token=token\',\'table1\',\'?db=pma'
+                . '&amp;table=table1&amp;server=0&amp;lang=en'
+                . '&amp;collation_connection=utf-8&amp;token=token\');'
                 . 'return false;" >Browse</a></td><td>'
                 . '<a name="delete_search" class="ajax" href'
                 . '="sql.php?db=pma&amp;table=table1&amp;goto=db_sql.php&amp;pos=0'
                 . '&amp;is_js_confirmed=0&amp;sql_query=column2&amp;server=0&amp;'
-                . 'lang=en&amp;token=token" onclick="deleteResult(\'sql.php?db=pma'
+                . 'lang=en&amp;collation_connection=utf-8&amp;token=token"'
+                . ' onclick="deleteResult(\'sql.php?db=pma'
                 . '&amp;table=table1&amp;goto=db_sql.php&amp;pos=0&amp;is_js_'
-                . 'confirmed=0&amp;sql_query=column2&amp;server=0&amp;lang=en&amp;'
+                . 'confirmed=0&amp;sql_query=column2&amp;server=0&amp;lang=en'
+                . '&amp;collation_connection=utf-8&amp;'
                 . 'token=token\' , \'Delete the matches for the table1 table?\');'
                 . 'return false;">Delete</a></td></tr>'
             )
@@ -183,12 +200,13 @@ class PMA_DbSearch_Test extends PHPUnit_Framework_TestCase
     {
         $_SESSION['PMA_Theme'] = new PMA_Theme();
         $GLOBALS['pmaThemeImage'] = 'themes/dot.gif';
-        $url_params = array('param1', 'param2');
         $this->assertEquals(
             '<a id="db_search"></a><form id="db_search_form" class="ajax" '
-            . 'method="post" action="db_search.php" name="db_search"><input type'
-            . '="hidden" name="db" value="pma" /><input type="hidden" name="lang" '
-            . 'value="en" /><input type="hidden" name="token" value="token" />'
+            . 'method="post" action="db_search.php" name="db_search">'
+            . '<input type="hidden" name="db" value="pma" />'
+            . '<input type="hidden" name="lang" value="en" />'
+            . '<input type="hidden" name="collation_connection" value="utf-8" />'
+            . '<input type="hidden" name="token" value="token" />'
             . '<fieldset><legend>Search in database</legend><table class='
             . '"formlayout"><tr><td>Words or values to search for (wildcard: "%"):'
             . '</td><td><input type="text" name="criteriaSearchString" size="60" '
@@ -229,7 +247,7 @@ class PMA_DbSearch_Test extends PHPUnit_Framework_TestCase
             . 'type="submit" name="submit_search" value="Go" id="buttonGo" />'
             . '</fieldset></form><div id="togglesearchformdiv">'
             . '<a id="togglesearchformlink"></a></div>',
-            $this->object->getSelectionForm($url_params)
+            $this->object->getSelectionForm()
         );
     }
 

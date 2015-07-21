@@ -59,7 +59,6 @@ class AuthenticationVcap extends AuthenticationPlugin
         header('Content-Type: text/html; charset=utf-8');
         /* HTML header */
         $page_title = __('Access denied');
-        include './libraries/header_meta_style.inc.php';
         ?>
         <style type="text/css">
             code {
@@ -276,4 +275,5 @@ class AuthenticationVcap extends AuthenticationPlugin
         }
     }
 }
+?>
 

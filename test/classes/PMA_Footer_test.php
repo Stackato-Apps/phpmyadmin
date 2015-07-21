@@ -59,8 +59,6 @@ class PMA_Footer_Test extends PHPUnit_Framework_TestCase
         $GLOBALS['PMA_Config'] = new PMA_Config();
         $GLOBALS['PMA_Config']->enableBc();
         $GLOBALS['collation_connection'] = 'utf8_general_ci';
-        $GLOBALS['cfg']['Error_Handler']['gather'] = false;
-        $GLOBALS['cfg']['Error_Handler']['display'] = false;
         $GLOBALS['cfg']['Server']['verbose'] = 'verbose host';
         $GLOBALS['cfg']['DefaultTabDatabase'] = 'db_structure.php';
         $GLOBALS['server'] = '1';
@@ -105,7 +103,7 @@ class PMA_Footer_Test extends PHPUnit_Framework_TestCase
     }
 
     /**
-     * Test for _getDebugMessage
+     * Test for getDebugMessage
      *
      * @return void
      *
@@ -130,10 +128,7 @@ class PMA_Footer_Test extends PHPUnit_Framework_TestCase
         $this->assertRegExp(
             '/<div id="session_debug">2 queries executed 2 times in 2.7 seconds'
             . '<pre>/',
-            $this->_callPrivateFunction(
-                '_getDebugMessage',
-                array()
-            )
+            $this->object->getDebugMessage()
         );
     }
 
@@ -229,7 +224,7 @@ class PMA_Footer_Test extends PHPUnit_Framework_TestCase
     {
         $footer = new PMA_Footer();
         $this->assertContains(
-            '<script type="text/javascript">',
+            '<script data-cfasync="false" type="text/javascript">',
             $footer->getScripts()->getDisplay()
         );
     }

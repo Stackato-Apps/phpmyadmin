@@ -44,6 +44,15 @@ class PMA_Util_Test extends PHPUnit_Framework_TestCase
             '3',
             $limit_data['length']
         );
+
+        $limit_data = PMA_Util::analyzeLimitClause("limit 3,2,5");
+        $this->assertFalse($limit_data);
+
+        $limit_data = PMA_Util::analyzeLimitClause("limit");
+        $this->assertFalse($limit_data);
+
+        $limit_data = PMA_Util::analyzeLimitClause("limit ");
+        $this->assertFalse($limit_data);
     }
 
     /**
@@ -93,7 +102,7 @@ class PMA_Util_Test extends PHPUnit_Framework_TestCase
     public function testPageSelector()
     {
         $this->assertContains(
-            '<select class="pageselector  ajax" name="pma" >',
+            '<select class="pageselector ajax" name="pma" >',
             PMA_Util::pageselector("pma", 3)
         );
     }
@@ -105,6 +114,7 @@ class PMA_Util_Test extends PHPUnit_Framework_TestCase
      *
      * @group large
      */
+    /*
     public function testGetLatestVersion()
     {
         $GLOBALS['cfg']['ProxyUrl'] = '';
@@ -113,7 +123,7 @@ class PMA_Util_Test extends PHPUnit_Framework_TestCase
         $this->assertNotEmpty($version->version);
         $this->assertNotEmpty($version->date);
     }
-
+    */
     /**
      * Test version to int conversion.
      *

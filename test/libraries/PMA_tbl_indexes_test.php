@@ -97,7 +97,7 @@ class PMA_TblIndexTest extends PHPUnit_Framework_TestCase
         );
 
         $this->assertEquals(
-            "ALTER TABLE `pma_db`.`pma_table` DROP PRIMARY KEY, COMMENT '';",
+            "ALTER TABLE `pma_db`.`pma_table` DROP PRIMARY KEY, ADD UNIQUE ;",
             $sql
         );
     }
@@ -111,12 +111,11 @@ class PMA_TblIndexTest extends PHPUnit_Framework_TestCase
     public function testPMAGetNumberOfFieldsForForm()
     {
         $index = new PMA_Index();
-        $error = false;
 
         $add_fields = PMA_getNumberOfFieldsForForm($index);
 
         $this->assertEquals(
-            1,
+            0,
             $add_fields
         );
 
@@ -242,7 +241,7 @@ class PMA_TblIndexTest extends PHPUnit_Framework_TestCase
 
         //generateIndexSelector
         $this->assertContains(
-            $index->generateIndexSelector(),
+            $index->generateIndexChoiceSelector(false),
             $html
         );
 

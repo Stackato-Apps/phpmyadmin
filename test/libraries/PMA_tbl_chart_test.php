@@ -282,12 +282,10 @@ class Mock_Meta
      * Constructor
      *
      * @param string $type1 meta type
-     *
-     * @return object
      */
     public function __construct($type1)
     {
-        $type = $type1;
+        $this->type = $type1;
     }
 }
 

@@ -104,19 +104,6 @@ class ImportOds extends ImportPlugin
     }
 
     /**
-     * This method is called when any PluginManager to which the observer
-     * is attached calls PluginManager::notify()
-     *
-     * @param SplSubject $subject The PluginManager notifying the observer
-     *                            of an update.
-     *
-     * @return void
-     */
-    public function update (SplSubject $subject)
-    {
-    }
-
-    /**
      * Handles the whole import logic
      *
      * @return void
@@ -210,7 +197,10 @@ class ImportOds extends ImportPlugin
                     continue;
                 }
                 /* Iterate over columns */
+                $cellCount = count($row);
+                $a = 0;
                 foreach ($row as $cell) {
+                    $a++;
                     $text = $cell->children('text', true);
                     $cell_attrs = $cell->attributes('office', true);
 
@@ -224,7 +214,9 @@ class ImportOds extends ImportPlugin
                             if (! $col_names_in_first_row) {
                                 $tempRow[] = $value;
                             } else {
-                                $col_names[] = $value;
+                                // MySQL column names can't end with a space
+                                // character.
+                                $col_names[] = rtrim($value);
                             }
 
                             ++$col_count;
@@ -232,8 +224,8 @@ class ImportOds extends ImportPlugin
                         continue;
                     }
 
-                    /* Number of blank columns repeated */
-                    if ($col_count >= count($row->children('table', true)) - 1) {
+                    // skip empty repeats in the last row
+                    if ($a == $cellCount) {
                         continue;
                     }
 
@@ -379,13 +371,7 @@ class ImportOds extends ImportPlugin
          */
 
         /* Set database name to the currently selected one, if applicable */
-        if (strlen($db)) {
-            $db_name = $db;
-            $options = array('create_db' => false);
-        } else {
-            $db_name = 'ODS_DB';
-            $options = null;
-        }
+        list($db_name, $options) = $this->getDbnameAndOptions($db, 'ODS_DB');
 
         /* Non-applicable parameters */
         $create = null;

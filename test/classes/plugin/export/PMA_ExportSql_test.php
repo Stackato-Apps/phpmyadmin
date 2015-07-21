@@ -50,6 +50,7 @@ class PMA_ExportSql_Test extends PHPUnit_Framework_TestCase
         $GLOBALS['plugin_param']['export_type'] = 'table';
         $GLOBALS['plugin_param']['single_table'] = false;
         $GLOBALS['cfgRelation']['relation'] = true;
+        $GLOBALS['controllink'] = null;
         $this->object = new ExportSql();
     }
 
@@ -73,7 +74,7 @@ class PMA_ExportSql_Test extends PHPUnit_Framework_TestCase
     {
         $restoreDrizzle = $restoreMySQLIntVersion = 'PMANORESTORE';
 
-        if (PMA_DRIZZLE || PMA_MYSQL_INT_VERSION <= 50100) {
+        if (PMA_DRIZZLE) {
             if (!PMA_HAS_RUNKIT) {
                 $this->markTestSkipped(
                     "Cannot redefine constant. Missing runkit extension"
@@ -82,10 +83,6 @@ class PMA_ExportSql_Test extends PHPUnit_Framework_TestCase
                 if (PMA_DRIZZLE) {
                     $restoreDrizzle = PMA_DRIZZLE;
                     runkit_constant_redefine('PMA_DRIZZLE', false);
-                }
-                if (PMA_MYSQL_INT_VERSION <= 50100) {
-                    $restoreMySQLIntVersion = PMA_MYSQL_INT_VERSION;
-                    runkit_constant_redefine('PMA_MYSQL_INT_VERSION', 50111);
                 }
             }
         }
@@ -275,8 +272,8 @@ class PMA_ExportSql_Test extends PHPUnit_Framework_TestCase
         );
 
         $this->assertEquals(
-            'Add <code>DROP TABLE / VIEW / PROCEDURE / FUNCTION</code>' .
-            '<code> / EVENT</code><code> / TRIGGER</code> statement',
+            'Add <code>DROP TABLE / VIEW / PROCEDURE / FUNCTION' .
+            ' / EVENT</code><code> / TRIGGER</code> statement',
             $leaf->getText()
         );
 
@@ -365,7 +362,7 @@ class PMA_ExportSql_Test extends PHPUnit_Framework_TestCase
     {
         $restoreDrizzle = $restoreMySQLIntVersion = 'PMANORESTORE';
 
-        if (!PMA_DRIZZLE || PMA_MYSQL_INT_VERSION > 50100) {
+        if (!PMA_DRIZZLE) {
             if (!PMA_HAS_RUNKIT) {
                 $this->markTestSkipped(
                     "Cannot redefine constant. Missing runkit extension"
@@ -375,10 +372,8 @@ class PMA_ExportSql_Test extends PHPUnit_Framework_TestCase
                     $restoreDrizzle = PMA_DRIZZLE;
                     runkit_constant_redefine('PMA_DRIZZLE', true);
                 }
-                if (PMA_MYSQL_INT_VERSION > 50100) {
-                    $restoreMySQLIntVersion = PMA_MYSQL_INT_VERSION;
-                    runkit_constant_redefine('PMA_MYSQL_INT_VERSION', 50000);
-                }
+                $restoreMySQLIntVersion = PMA_MYSQL_INT_VERSION;
+                runkit_constant_redefine('PMA_MYSQL_INT_VERSION', 50000);
             }
         }
 
@@ -816,11 +811,17 @@ class PMA_ExportSql_Test extends PHPUnit_Framework_TestCase
 
         // case2: no backquotes
         unset($GLOBALS['sql_compatibility']);
+        $GLOBALS['cfg']['Server']['DisableIS'] = true;
         unset($GLOBALS['sql_backquotes']);
 
         $dbi = $this->getMockBuilder('PMA_DatabaseInterface')
             ->disableOriginalConstructor()
             ->getMock();
+
+        $dbi->expects($this->once())
+            ->method('fetchValue')
+            ->with('SHOW VARIABLES LIKE \'collation_database\'', 0, 1)
+            ->will($this->returnValue('testcollation'));
 
         $GLOBALS['dbi'] = $dbi;
 
@@ -836,7 +837,7 @@ class PMA_ExportSql_Test extends PHPUnit_Framework_TestCase
         );
 
         $this->assertContains(
-            'CREATE DATABASE IF NOT EXISTS db',
+            'CREATE DATABASE IF NOT EXISTS db DEFAULT CHARACTER SET testcollation;',
             $result
         );
 
@@ -854,7 +855,7 @@ class PMA_ExportSql_Test extends PHPUnit_Framework_TestCase
     public function testExportDBHeader()
     {
         $GLOBALS['sql_compatibility'] = 'MSSQL';
-        $GLOBALS['sql_backquotes'] = '';
+        $GLOBALS['sql_backquotes'] = true;
         $GLOBALS['sql_include_comments'] = true;
         $GLOBALS['crlf'] = "\n";
 
@@ -880,7 +881,7 @@ class PMA_ExportSql_Test extends PHPUnit_Framework_TestCase
         $result = ob_get_clean();
 
         $this->assertContains(
-            "'testDB'",
+            "testDB",
             $result
         );
     }
@@ -894,15 +895,13 @@ class PMA_ExportSql_Test extends PHPUnit_Framework_TestCase
     {
         $restoreMySQLVersion = "PMANORESTORE";
 
-        if (PMA_MYSQL_INT_VERSION <= 50100) {
-            if (! PMA_HAS_RUNKIT) {
-                $this->markTestSkipped(
-                    'Cannot redefine constant. Missing runkit extension'
-                );
-            } else {
-                $restoreMySQLVersion = PMA_MYSQL_INT_VERSION;
-                runkit_constant_redefine('PMA_MYSQL_INT_VERSION', 50101);
-            }
+        if (! PMA_HAS_RUNKIT) {
+            $this->markTestSkipped(
+                'Cannot redefine constant. Missing runkit extension'
+            );
+        } else {
+            $restoreMySQLVersion = PMA_MYSQL_INT_VERSION;
+            runkit_constant_redefine('PMA_MYSQL_INT_VERSION', 50101);
         }
 
         $GLOBALS['crlf'] = "\n";
@@ -979,15 +978,13 @@ class PMA_ExportSql_Test extends PHPUnit_Framework_TestCase
     {
         $restoreMySQLVersion = "PMANORESTORE";
 
-        if (PMA_MYSQL_INT_VERSION > 50100) {
-            if (! PMA_HAS_RUNKIT) {
-                $this->markTestSkipped(
-                    'Cannot redefine constant. Missing runkit extension'
-                );
-            } else {
-                $restoreMySQLVersion = PMA_MYSQL_INT_VERSION;
-                runkit_constant_redefine('PMA_MYSQL_INT_VERSION', 50100);
-            }
+        if (! PMA_HAS_RUNKIT) {
+            $this->markTestSkipped(
+                'Cannot redefine constant. Missing runkit extension'
+            );
+        } else {
+            $restoreMySQLVersion = PMA_MYSQL_INT_VERSION;
+            runkit_constant_redefine('PMA_MYSQL_INT_VERSION', 50100);
         }
 
         $GLOBALS['crlf'] = "\n";
@@ -1178,7 +1175,7 @@ class PMA_ExportSql_Test extends PHPUnit_Framework_TestCase
         $dbi->expects($this->at(0))
             ->method('query')
             ->with(
-                'SHOW TABLE STATUS FROM `db` LIKE \'table\'', null,
+                'SHOW TABLE STATUS FROM `db` WHERE Name = \'table\'', null,
                 PMA_DatabaseInterface::QUERY_STORE
             )
             ->will($this->returnValue('res'));
@@ -1229,6 +1226,7 @@ class PMA_ExportSql_Test extends PHPUnit_Framework_TestCase
             ->will($this->returnValue($row));
 
         $GLOBALS['dbi'] = $dbi;
+        $GLOBALS['cfg']['Server']['DisableIS'] = false;
 
         $result = $this->object->getTableDef(
             'db', 'table', "\n", "example.com/err", true, true, true
@@ -1295,7 +1293,7 @@ class PMA_ExportSql_Test extends PHPUnit_Framework_TestCase
         );
 
         $this->assertContains(
-            'ADD CONSTRAINT KEYS ADD FOREIGN  KEY;',
+            '  ADD CONSTRAINT KEYS   ADD FOREIGN  KEY;',
             $GLOBALS['sql_constraints_query']
         );
 
@@ -1358,7 +1356,7 @@ class PMA_ExportSql_Test extends PHPUnit_Framework_TestCase
         $dbi->expects($this->at(0))
             ->method('query')
             ->with(
-                'SHOW TABLE STATUS FROM `db` LIKE \'table\'', null,
+                'SHOW TABLE STATUS FROM `db` WHERE Name = \'table\'', null,
                 PMA_DatabaseInterface::QUERY_STORE
             )
             ->will($this->returnValue('res'));
@@ -1405,6 +1403,7 @@ class PMA_ExportSql_Test extends PHPUnit_Framework_TestCase
             ->will($this->returnValue($row));
 
         $GLOBALS['dbi'] = $dbi;
+        $GLOBALS['cfg']['Server']['DisableIS'] = false;
 
         $result = $this->object->getTableDef(
             'db', 'table', "\n", "example.com/err", true, true, true
@@ -1417,11 +1416,6 @@ class PMA_ExportSql_Test extends PHPUnit_Framework_TestCase
 
         $this->assertContains(
             ") unsigned NOT NULL\n",
-            $result
-        );
-
-        $this->assertContains(
-            "AUTO_INCREMENT=1 ;",
             $result
         );
 
@@ -1483,7 +1477,7 @@ class PMA_ExportSql_Test extends PHPUnit_Framework_TestCase
         $dbi->expects($this->at(0))
             ->method('query')
             ->with(
-                'SHOW TABLE STATUS FROM `db` LIKE \'table\'', null,
+                'SHOW TABLE STATUS FROM `db` WHERE Name = \'table\'', null,
                 PMA_DatabaseInterface::QUERY_STORE
             )
             ->will($this->returnValue('res'));
@@ -1527,6 +1521,7 @@ class PMA_ExportSql_Test extends PHPUnit_Framework_TestCase
             ->will($this->returnValue('error occurred'));
 
         $GLOBALS['dbi'] = $dbi;
+        $GLOBALS['cfg']['Server']['DisableIS'] = false;
 
         $result = $this->object->getTableDef(
             'db', 'table', "\n", "example.com/err", true, true, true
@@ -1699,12 +1694,12 @@ class PMA_ExportSql_Test extends PHPUnit_Framework_TestCase
         $result = ob_get_clean();
 
         $this->assertContains(
-            "-- Triggers 't&amp;bl'\n",
+            "-- Triggers t&amp;bl\n",
             $result
         );
 
         $this->assertContains(
-            "foo;\nDELIMITER //\nbarDELIMITER ;\n",
+            "foo;\nDELIMITER $$\nbarDELIMITER ;\n",
             $result
         );
 
@@ -1723,7 +1718,7 @@ class PMA_ExportSql_Test extends PHPUnit_Framework_TestCase
         $result = ob_get_clean();
 
         $this->assertContains(
-            "-- Structure for view 't&amp;bl'\n",
+            "-- Structure for view t&amp;bl\n",
             $result
         );
 
@@ -1877,6 +1872,7 @@ class PMA_ExportSql_Test extends PHPUnit_Framework_TestCase
         $GLOBALS['sql_truncate'] = true;
         $GLOBALS['sql_insert_syntax'] = 'both';
         $GLOBALS['sql_hex_for_binary'] = true;
+        $GLOBALS['cfg']['Server']['DisableIS'] = false;
 
         ob_start();
         $this->object->exportData(
@@ -1896,7 +1892,7 @@ class PMA_ExportSql_Test extends PHPUnit_Framework_TestCase
         );
 
         $this->assertContains(
-            'INSERT DELAYED IGNORE INTO &quot;table&quot; (&quot;a&quot;, ' .
+            'INSERT DELAYED IGNORE INTO &quot;table&quot; (&quot;name&quot;, ' .
             '&quot;name&quot;, &quot;name&quot;, &quot;name&quot;, ' .
             '&quot;name&quot;) VALUES',
             $result
@@ -1992,6 +1988,7 @@ class PMA_ExportSql_Test extends PHPUnit_Framework_TestCase
         $GLOBALS['sql_truncate'] = true;
         $GLOBALS['sql_insert_syntax'] = 'both';
         $GLOBALS['sql_hex_for_binary'] = true;
+        $GLOBALS['cfg']['Server']['DisableIS'] = false;
 
         ob_start();
         $this->object->exportData(
@@ -2001,7 +1998,7 @@ class PMA_ExportSql_Test extends PHPUnit_Framework_TestCase
         $result = ob_get_clean();
 
         $this->assertContains(
-            'UPDATE IGNORE &quot;table&quot; SET &quot;a&quot; = NULL,' .
+            'UPDATE IGNORE &quot;table&quot; SET &quot;name&quot; = NULL,' .
             '&quot;name&quot; = NULL WHERE CONCAT(`tbl`.`pma`) IS NULL;',
             $result
         );
@@ -2024,18 +2021,19 @@ class PMA_ExportSql_Test extends PHPUnit_Framework_TestCase
             ->will($this->returnValue(true));
 
         $GLOBALS['dbi'] = $dbi;
+        $GLOBALS['cfg']['Server']['DisableIS'] = false;
         $GLOBALS['sql_views_as_tables'] = false;
         $GLOBALS['sql_include_comments'] = true;
         $GLOBALS['crlf'] = "\n";
 
         ob_start();
         $this->assertTrue(
-            $this->object->exportData('db', 'table', "\n", "err.com", "SELECT")
+            $this->object->exportData('db', 'tbl', "\n", "err.com", "SELECT")
         );
         $result = ob_get_clean();
 
         $this->assertContains(
-            "-- VIEW  'table'\n",
+            "-- VIEW  tbl\n",
             $result
         );
 
@@ -2061,6 +2059,7 @@ class PMA_ExportSql_Test extends PHPUnit_Framework_TestCase
             ->will($this->returnValue('err'));
 
         $GLOBALS['dbi'] = $dbi;
+        $GLOBALS['cfg']['Server']['DisableIS'] = false;
         $GLOBALS['sql_views_as_tables'] = true;
         $GLOBALS['sql_include_comments'] = true;
         $GLOBALS['crlf'] = "\n";
@@ -2130,6 +2129,247 @@ class PMA_ExportSql_Test extends PHPUnit_Framework_TestCase
             " \" float NOT NULL,\n" .
             " \" float NOT NULL\n" .
             " \" float NOT NULL DEFAULT '213'\n",
+            $result
+        );
+    }
+
+    /**
+     * Test for ExportSql::initAlias
+     *
+     * @return void
+    */
+    public function testInitAlias()
+    {
+        $aliases = array(
+            'a' => array(
+                'alias' => 'aliastest',
+                'tables' => array(
+                    'foo' => array(
+                        'alias' => 'qwerty'
+                    ),
+                    'bar' => array(
+                        'alias' => 'f'
+                    )
+                )
+            )
+        );
+        $db = 'a';
+        $table = null;
+
+        $this->object->initAlias($aliases, $db, $table);
+        $this->assertEquals('aliastest', $db);
+        $this->assertNull($table);
+
+        $db = 'foo';
+        $table = 'qwerty';
+
+        $this->object->initAlias($aliases, $db, $table);
+        $this->assertEquals('foo', $db);
+        $this->assertEquals('qwerty', $table);
+
+        $db = 'a';
+        $table = 'foo';
+
+        $this->object->initAlias($aliases, $db, $table);
+        $this->assertEquals('aliastest', $db);
+        $this->assertEquals('qwerty', $table);
+    }
+
+    /**
+     * Test for ExportSql::getAlias
+     *
+     * @return void
+    */
+    public function testGetAlias()
+    {
+        $aliases = array(
+            'a' => array(
+                'alias' => 'aliastest',
+                'tables' => array(
+                    'foo' => array(
+                        'alias' => 'qwerty',
+                        'columns' => array(
+                            'baz' => 'p',
+                            'pqr' => 'pphymdain'
+                        )
+                    ),
+                    'bar' => array(
+                        'alias' => 'f',
+                        'columns' => array(
+                            'xy' => 'n'
+                        )
+                    )
+                )
+            )
+        );
+
+        $this->assertEquals(
+            'f', $this->object->getAlias($aliases, 'bar')
+        );
+
+        $this->assertEquals(
+            'aliastest', $this->object->getAlias($aliases, 'a')
+        );
+
+        $this->assertEquals(
+            'pphymdain', $this->object->getAlias($aliases, 'pqr')
+        );
+
+        $this->assertEquals(
+            '', $this->object->getAlias($aliases, 'abc')
+        );
+    }
+
+    /**
+     * Test for ExportSql::substituteAlias
+     *
+     * @return void
+    */
+    public function testSubstituteAlias()
+    {
+        $GLOBALS['sql_backquotes'] = '`';
+        $sql_query = 'CREATE TABLE `data` ( xyz int )';
+        $data = '`data`';
+        $alias = 'sample';
+        $pos = 19;
+        $offset = 0;
+        $result =$this->object->substituteAlias(
+            $sql_query, $data, $alias, $pos, $offset
+        );
+
+        $this->assertEquals(
+            'CREATE TABLE `sample` ( xyz int )',
+            $result
+        );
+        $this->assertEquals(2, $offset);
+
+        $GLOBALS['sql_backquotes'] = false;
+        $result =$this->object->substituteAlias(
+            $sql_query, $data, $alias, $pos
+        );
+
+        $this->assertEquals(
+            'CREATE TABLE sample ( xyz int )',
+            $result
+        );
+
+        $GLOBALS['sql_backquotes'] = '`';
+        $sql_query = 'CREATE TABLE `sample` ( qwerty int )';
+        $data = 'qwerty';
+        $alias = 'f';
+        $offset = 2;
+        $pos = 28 + 2;
+        $result =$this->object->substituteAlias(
+            $sql_query, $data, $alias, $pos, $offset
+        );
+
+        $this->assertEquals(
+            'CREATE TABLE `sample` ( `f` int )',
+            $result
+        );
+        $this->assertEquals(-1, $offset);
+    }
+
+    /**
+     * Test for ExportSql::replaceWithAlias
+     *
+     * @return void
+    */
+    public function testReplaceWithAlias()
+    {
+        $aliases = array(
+            'a' => array(
+                'alias' => 'aliastest',
+                'tables' => array(
+                    'foo' => array(
+                        'alias' => 'bartest',
+                        'columns' => array(
+                            'baz' => 'p',
+                            'pqr' => 'pphymdain'
+                        )
+                    ),
+                    'bar' => array(
+                        'alias' => 'f',
+                        'columns' => array(
+                            'xy' => 'n'
+                        )
+                    )
+                )
+            )
+        );
+
+        $GLOBALS['sql_backquotes'] = '`';
+        $db = 'a';
+        $table = 'foo';
+        $sql_query = "CREATE TABLE IF NOT EXISTS foo ("
+            . "baz tinyint(3) unsigned NOT NULL COMMENT 'Primary Key',"
+            . "xyz varchar(255) COLLATE latin1_general_ci NOT NULL "
+            . "COMMENT 'xyz',"
+            . "pqr varchar(10) COLLATE latin1_general_ci NOT NULL "
+            . "COMMENT 'pqr',"
+            . "CONSTRAINT fk_om_dept FOREIGN KEY (baz) "
+            . "REFERENCES dept_master (baz),"
+            . ") ENGINE=InnoDB  DEFAULT CHARSET=latin1 COLLATE="
+            . "latin1_general_ci COMMENT='List' AUTO_INCREMENT=5";
+        $result = $this->object->replaceWithAliases(
+            $sql_query, $aliases, $db, $table
+        );
+
+        $this->assertEquals(
+            "CREATE TABLE IF NOT EXISTS `bartest` ("
+            . "`p` tinyint(3) unsigned NOT NULL COMMENT 'Primary Key',"
+            . "xyz varchar(255) COLLATE latin1_general_ci NOT NULL "
+            . "COMMENT 'xyz',"
+            . "`pphymdain` varchar(10) COLLATE latin1_general_ci NOT NULL "
+            . "COMMENT 'pqr',"
+            . "CONSTRAINT fk_om_dept FOREIGN KEY (`p`) "
+            . "REFERENCES dept_master (baz),"
+            . ") ENGINE=InnoDB  DEFAULT CHARSET=latin1 COLLATE="
+            . "latin1_general_ci COMMENT='List' AUTO_INCREMENT=5",
+            $result
+        );
+
+        $result = $this->object->replaceWithAliases($sql_query, array(), '', '');
+
+        $this->assertEquals(
+            "CREATE TABLE IF NOT EXISTS foo ("
+            . "baz tinyint(3) unsigned NOT NULL COMMENT 'Primary Key',"
+            . "xyz varchar(255) COLLATE latin1_general_ci NOT NULL "
+            . "COMMENT 'xyz',"
+            . "pqr varchar(10) COLLATE latin1_general_ci NOT NULL "
+            . "COMMENT 'pqr',"
+            . "CONSTRAINT fk_om_dept FOREIGN KEY (baz) "
+            . "REFERENCES dept_master (baz),"
+            . ") ENGINE=InnoDB  DEFAULT CHARSET=latin1 COLLATE="
+            . "latin1_general_ci COMMENT='List' AUTO_INCREMENT=5",
+            $result
+        );
+
+        $GLOBALS['sql_backquotes'] = null;
+        $table = 'bar';
+        $sql_query = "CREATE TRIGGER `BEFORE_bar_INSERT` "
+            . "BEFORE INSERT ON `bar`\r\n"
+            . "FOR EACH ROW BEGIN\r\n"
+            . "SET @cnt=(SELECT count(*) FROM bar WHERE "
+            . "xy=NEW.xy AND id=NEW.id AND "
+            . "abc=NEW.xy LIMIT 1);\r\n"
+            . "IF @cnt<>0 THEN\n"
+            . "SET NEW.xy=1;\r\n"
+            . "END IF;\nEND\n$$";
+        $result = $this->object->replaceWithAliases(
+            $sql_query, $aliases, $db, $table
+        );
+
+        $this->assertEquals(
+            "CREATE TRIGGER `BEFORE_bar_INSERT` "
+            . "BEFORE INSERT ON f\n"
+            . "FOR EACH ROW BEGIN\n"
+            . "SET @cnt=(SELECT count(*) FROM f WHERE "
+            . "n=NEW.n AND id=NEW.id AND "
+            . "abc=NEW.n LIMIT 1);\n"
+            . "IF @cnt<>0 THEN\n"
+            . "SET NEW.n=1;\n"
+            . "END IF;\nEND\n$$",
             $result
         );
     }

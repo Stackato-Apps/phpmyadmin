@@ -38,6 +38,7 @@ class PMA_Table_Test extends PHPUnit_Framework_TestCase
          * SET these to avoid undefined index error
          */
         $GLOBALS['server'] = 0;
+        $GLOBALS['cfg']['Server']['DisableIS'] = false;
         $GLOBALS['cfg']['ServerDefault'] = 1;
         $GLOBALS['cfg']['ActionLinksMode'] = 'both';
         $GLOBALS['cfg']['MaxExactCount'] = 100;
@@ -61,10 +62,6 @@ class PMA_Table_Test extends PHPUnit_Framework_TestCase
             'TABLE_TYPE' => true,
             'Comment' => true,
         );
-
-        $dbi = $this->getMockBuilder('PMA_DatabaseInterface')
-            ->disableOriginalConstructor()
-            ->getMock();
 
         $sql_isView_true =  "SELECT TABLE_NAME
             FROM information_schema.VIEWS
@@ -254,7 +251,6 @@ class PMA_Table_Test extends PHPUnit_Framework_TestCase
         $dbi->expects($this->any())->method('insertId')
             ->will($this->returnValue(10));
 
-
         $value = array("key1" => "value1");
         $dbi->expects($this->any())->method('fetchAssoc')
             ->will($this->returnValue(false));
@@ -262,7 +258,6 @@ class PMA_Table_Test extends PHPUnit_Framework_TestCase
         $value = array("Auto_increment" => "Auto_increment");
         $dbi->expects($this->any())->method('fetchSingleRow')
             ->will($this->returnValue($value));
-
 
         $value = array("value1", "value2");
         $dbi->expects($this->any())->method('fetchRow')
@@ -412,7 +407,7 @@ class PMA_Table_Test extends PHPUnit_Framework_TestCase
      * Test name validation
      *
      * @param string  $name   name to test
-     * @param boolena $result expected result
+     * @param boolean $result expected result
      *
      * @return void
      *
@@ -474,23 +469,21 @@ class PMA_Table_Test extends PHPUnit_Framework_TestCase
         //type is BIT
         $name = "PMA_name";
         $type = "BIT";
-        $index = "PMA_index";
         $length = '12';
         $attribute = 'PMA_attribute';
         $collation = 'PMA_collation';
-        $null = true;
+        $null = 'NULL';
         $default_type = 'USER_DEFINED';
         $default_value = 12;
         $extra = 'AUTO_INCREMENT';
 
         $comment = 'PMA_comment';
-        $field_primary = array("field_primary1", "field_primary2");
         $move_to = '-first';
 
         $query = PMA_Table::generateFieldSpec(
-            $name, $type, $index, $length, $attribute, $collation,
+            $name, $type, $length, $attribute, $collation,
             $null, $default_type,  $default_value, $extra, $comment,
-            $field_primary, $move_to
+            $move_to
         );
         $this->assertEquals(
             "`PMA_name` BIT(12) PMA_attribute NULL DEFAULT b'10' "
@@ -501,9 +494,9 @@ class PMA_Table_Test extends PHPUnit_Framework_TestCase
         //type is DOUBLE
         $type = "DOUBLE";
         $query = PMA_Table::generateFieldSpec(
-            $name, $type, $index, $length, $attribute, $collation,
+            $name, $type, $length, $attribute, $collation,
             $null, $default_type,  $default_value, $extra, $comment,
-            $field_primary, $move_to
+            $move_to
         );
         $this->assertEquals(
             "`PMA_name` DOUBLE(12) PMA_attribute NULL DEFAULT '12' "
@@ -514,9 +507,9 @@ class PMA_Table_Test extends PHPUnit_Framework_TestCase
         //type is BOOLEAN
         $type = "BOOLEAN";
         $query = PMA_Table::generateFieldSpec(
-            $name, $type, $index, $length, $attribute, $collation,
+            $name, $type, $length, $attribute, $collation,
             $null, $default_type,  $default_value, $extra, $comment,
-            $field_primary, $move_to
+            $move_to
         );
         $this->assertEquals(
             "`PMA_name` BOOLEAN PMA_attribute NULL DEFAULT TRUE "
@@ -527,9 +520,9 @@ class PMA_Table_Test extends PHPUnit_Framework_TestCase
         //$default_type is NULL
         $default_type = 'NULL';
         $query = PMA_Table::generateFieldSpec(
-            $name, $type, $index, $length, $attribute, $collation,
+            $name, $type, $length, $attribute, $collation,
             $null, $default_type,  $default_value, $extra, $comment,
-            $field_primary, $move_to
+            $move_to
         );
         $this->assertEquals(
             "`PMA_name` BOOLEAN PMA_attribute NULL DEFAULT NULL "
@@ -540,9 +533,9 @@ class PMA_Table_Test extends PHPUnit_Framework_TestCase
         //$default_type is CURRENT_TIMESTAMP
         $default_type = 'CURRENT_TIMESTAMP';
         $query = PMA_Table::generateFieldSpec(
-            $name, $type, $index, $length, $attribute, $collation,
+            $name, $type, $length, $attribute, $collation,
             $null, $default_type,  $default_value, $extra, $comment,
-            $field_primary, $move_to
+            $move_to
         );
         $this->assertEquals(
             "`PMA_name` BOOLEAN PMA_attribute NULL DEFAULT CURRENT_TIMESTAMP "
@@ -555,9 +548,9 @@ class PMA_Table_Test extends PHPUnit_Framework_TestCase
         $extra = 'INCREMENT';
         $move_to = '-first';
         $query = PMA_Table::generateFieldSpec(
-            $name, $type, $index, $length, $attribute, $collation,
+            $name, $type, $length, $attribute, $collation,
             $null, $default_type,  $default_value, $extra, $comment,
-            $field_primary, $move_to
+            $move_to
         );
         $this->assertEquals(
             "`PMA_name` BOOLEAN PMA_attribute NULL INCREMENT "
@@ -705,9 +698,6 @@ class PMA_Table_Test extends PHPUnit_Framework_TestCase
      */
     public function testGenerateAlter()
     {
-        $table = 'PMA_BookMark';
-        $db = 'PMA';
-
         //parameter
         $oldcol = 'name';
         $newcol = 'new_name';
@@ -720,14 +710,12 @@ class PMA_Table_Test extends PHPUnit_Framework_TestCase
         $default_value = 'VARCHAR';
         $extra = 'AUTO_INCREMENT';
         $comment = 'PMA comment';
-        $field_primary = 'new_name';
-        $index = array('new_name');
         $move_to = 'new_name';
 
         $result = PMA_Table::generateAlter(
             $oldcol, $newcol, $type, $length,
             $attribute, $collation, $null, $default_type, $default_value,
-            $extra, $comment, $field_primary, $index, $move_to
+            $extra, $comment, $move_to
         );
 
         $expect = "";
@@ -789,7 +777,6 @@ class PMA_Table_Test extends PHPUnit_Framework_TestCase
             false,
             $result
         );
-
 
         $table_new = 'PMA_BookMark_new';
         $db_new = 'PMA_new';
@@ -973,7 +960,7 @@ class PMA_Table_Test extends PHPUnit_Framework_TestCase
             $target_table, $what, $move, $mode
         );
 
-        //successully
+        //successfully
         $expect = true;
         $this->assertEquals(
             $expect,
@@ -996,7 +983,7 @@ class PMA_Table_Test extends PHPUnit_Framework_TestCase
             $target_table, $what, false, $mode
         );
 
-        //successully
+        //successfully
         $expect = true;
         $this->assertEquals(
             $expect,

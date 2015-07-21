@@ -1,7 +1,7 @@
 <?php
 /* vim: set expandtab sw=4 ts=4 sts=4: */
 /**
- * Tests for libraries/tbl_tracking.lib.php
+ * Tests for libraries/tracking.lib.php
  *
  * @package PhpMyAdmin-test
  */
@@ -9,7 +9,7 @@
 /*
  * Include to test.
  */
-require_once 'libraries/tbl_tracking.lib.php';
+require_once 'libraries/tracking.lib.php';
 require_once 'libraries/Util.class.php';
 require_once 'libraries/database_interface.inc.php';
 require_once 'libraries/php-gettext/gettext.inc';
@@ -20,7 +20,7 @@ require_once 'libraries/Message.class.php';
 require_once 'libraries/js_escape.lib.php';
 
 /**
- * Tests for libraries/tbl_tracking.lib.php
+ * Tests for libraries/tracking.lib.php
  *
  * @package PhpMyAdmin-test
  */
@@ -44,12 +44,18 @@ class PMA_TblTrackingTest extends PHPUnit_Framework_TestCase
         $GLOBALS['server'] = 1;
         $GLOBALS['db'] = "PMA_db";
         $GLOBALS['table'] = "PMA_table";
-        $GLOBALS['cfg']['Server']['pmadb'] = 'pmadb';
+        $GLOBALS['pmaThemeImage'] = "image";
         $GLOBALS['cfg']['ServerDefault'] = "server";
-        $GLOBALS['cfg']['Server']['tracking'] = "tracking";
-        $GLOBALS['cfg']['ActionsLinksMode'] = 'ActionsLinksMode';
-        $GLOBALS['cfg']['ActionLinksMode'] = 'ActionLinksMode';
+        $GLOBALS['cfg']['ActionLinksMode'] = 'both';
         $GLOBALS['cfg']['MaxCharactersInDisplayedSQL'] = 1000;
+
+        $_SESSION['relation'][$GLOBALS['server']] = array(
+            'db' => 'pmadb',
+            'tracking' => 'tracking',
+            'trackingwork' => true
+        );
+
+        $GLOBALS['cfg']['Server']['tracking_default_statements'] = 'DELETE';
 
         $dbi = $this->getMockBuilder('PMA_DatabaseInterface')
             ->disableOriginalConstructor()
@@ -118,7 +124,7 @@ class PMA_TblTrackingTest extends PHPUnit_Framework_TestCase
         $url_query = "url_query";
         $last_version = "10";
         $html = PMA_getHtmlForDataDefinitionAndManipulationStatements(
-            $url_query, $last_version
+            $url_query, $last_version, $GLOBALS['db'], array($GLOBALS['table'])
         );
 
         $this->assertContains(
@@ -132,7 +138,7 @@ class PMA_TblTrackingTest extends PHPUnit_Framework_TestCase
         );
 
         $this->assertContains(
-            PMA_URL_getHiddenInputs($GLOBALS['db'], $GLOBALS['table']),
+            PMA_URL_getHiddenInputs($GLOBALS['db']),
             $html
         );
 
@@ -160,20 +166,17 @@ class PMA_TblTrackingTest extends PHPUnit_Framework_TestCase
     }
 
     /**
-     * Tests for PMA_getHtmlForActivateTracking() method.
+     * Tests for PMA_getHtmlForActivateDeactivateTracking() method.
      *
      * @return void
      * @test
      */
-    public function testPMAGetHtmlForActivateTracking()
+    public function testPMAGetHtmlForActivateDeactivateTracking()
     {
         $url_query = "url_query";
         $last_version = "10";
-        $html = PMA_getHtmlForActivateTracking($url_query, $last_version);
-
-        $this->assertContains(
-            '<div id="div_activate_tracking">',
-            $html
+        $html = PMA_getHtmlForActivateDeactivateTracking(
+            'activate', $url_query, $last_version
         );
 
         $this->assertContains(
@@ -199,23 +202,9 @@ class PMA_TblTrackingTest extends PHPUnit_Framework_TestCase
             __('Activate now'),
             $html
         );
-    }
 
-    /**
-     * Tests for PMA_getHtmlForDeactivateTracking() method.
-     *
-     * @return void
-     * @test
-     */
-    public function testPMAGetHtmlForDeactivateTracking()
-    {
-        $url_query = "url_query";
-        $last_version = "10";
-        $html = PMA_getHtmlForDeactivateTracking($url_query, $last_version);
-
-        $this->assertContains(
-            '<div id="div_deactivate_tracking">',
-            $html
+        $html = PMA_getHtmlForActivateDeactivateTracking(
+            'deactivate', $url_query, $last_version
         );
 
         $this->assertContains(
@@ -403,6 +392,8 @@ class PMA_TblTrackingTest extends PHPUnit_Framework_TestCase
         $last_version = "10";
         $url_params = array();
         $url_query = "select * from PMA";
+        $pmaThemeImage = "themePath/img";
+        $text_dir = "ltr";
 
         $dbi_old = $GLOBALS['dbi'];
         $dbi = $this->getMockBuilder('PMA_DatabaseInterface')
@@ -430,17 +421,10 @@ class PMA_TblTrackingTest extends PHPUnit_Framework_TestCase
         $GLOBALS['dbi'] = $dbi;
 
         $ret = PMA_getHtmlForTableVersionDetails(
-            $sql_result, $last_version, $url_params, $url_query
+            $sql_result, $last_version, $url_params, $url_query,
+            $pmaThemeImage, $text_dir
         );
 
-        $this->assertContains(
-            __('Database'),
-            $ret
-        );
-        $this->assertContains(
-            __('Table'),
-            $ret
-        );
         $this->assertContains(
             __('Version'),
             $ret
@@ -458,15 +442,11 @@ class PMA_TblTrackingTest extends PHPUnit_Framework_TestCase
             $ret
         );
         $this->assertContains(
+            __('Action'),
+            $ret
+        );
+        $this->assertContains(
             __('Show'),
-            $ret
-        );
-        $this->assertContains(
-            $fetchArray['db_name'],
-            $ret
-        );
-        $this->assertContains(
-            $fetchArray['table_name'],
             $ret
         );
         $this->assertContains(
@@ -548,10 +528,6 @@ class PMA_TblTrackingTest extends PHPUnit_Framework_TestCase
         );
         $this->assertContains(
             htmlspecialchars($fetchArray['db_name']),
-            $ret
-        );
-        $this->assertContains(
-            __('Show versions'),
             $ret
         );
 
@@ -670,7 +646,6 @@ class PMA_TblTrackingTest extends PHPUnit_Framework_TestCase
     public function testPMAGetHtmlForDataManipulationStatements()
     {
         $_REQUEST['version'] = "10";
-        $url_query = "select * from PMA";
         $data = array(
             'tracking'=>'tracking',
             'dmlog' => array(
@@ -730,7 +705,6 @@ class PMA_TblTrackingTest extends PHPUnit_Framework_TestCase
     public function testPMAGetHtmlForDataDefinitionStatements()
     {
         $_REQUEST['version'] = "10";
-        $url_query = "select * from PMA";
 
         $data = array(
             'tracking'=>'tracking',
@@ -770,7 +744,7 @@ class PMA_TblTrackingTest extends PHPUnit_Framework_TestCase
         );
 
         $this->assertContains(
-            __('Delete'),
+            __('Action'),
             $html
         );
 
@@ -800,7 +774,7 @@ class PMA_TblTrackingTest extends PHPUnit_Framework_TestCase
                 'Non_unique' => 0,
                 'Packed' => '',
                 'Key_name' => 'Key_name1',
-                'Index_type' => 'Index_type1',
+                'Index_type' => 'BTREE',
                 'Column_name' => 'Column_name',
                 'Cardinality' => 'Cardinality',
                 'Collation' => 'Collation',
@@ -936,8 +910,6 @@ class PMA_TblTrackingTest extends PHPUnit_Framework_TestCase
         $filter_users = array("*");
         $filter_ts_to = 9999999999;
         $filter_ts_from = 0;
-        $url_params = array();
-        $drop_image_or_text = "text";
 
         $entries = PMA_getEntries(
             $data, $filter_ts_from, $filter_ts_to, $filter_users
