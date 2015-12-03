@@ -1,9 +1,8 @@
 applications:
 - name: phpmyadmin
-  buildpack: https://github.com/heroku/heroku-buildpack-php.git
+  buildpack: https://github.com/heroku/heroku-buildpack-php#v71
   instances: 1
   mem: 128
-  runtime: php
   services:
     # an empty default database
     # comment out if desired and bind existing databases
