@@ -5,10 +5,10 @@ A set of PHP-scripts to manage MySQL over the web.
 
 https://www.phpmyadmin.net/
 
-Deploying to Stackato
+Deploying to HPE Helion Stackato
 ---------------------
 
-To deploy on Stackato, run:
+To deploy on HPE Helion Stackato, run:
 
     stackato push -n
 
