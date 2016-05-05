@@ -37,6 +37,7 @@ class Key extends Component
         'KEY_BLOCK_SIZE'                => array(1, 'var'),
         'USING'                         => array(2, 'var'),
         'WITH PARSER'                   => array(3, 'var'),
+        'COMMENT'                       => array(4, 'var='),
     );
 
     /**
@@ -92,7 +93,7 @@ class Key extends Component
      * @param TokensList $list    The list of tokens that are being parsed.
      * @param array      $options Parameters for parsing.
      *
-     * @return Key[]
+     * @return Key
      */
     public static function parse(Parser $parser, TokensList $list, array $options = array())
     {

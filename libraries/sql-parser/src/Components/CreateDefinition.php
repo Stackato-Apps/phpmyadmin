@@ -43,7 +43,7 @@ class CreateDefinition extends Component
 
         'NOT NULL'                      => 1,
         'NULL'                          => 1,
-        'DEFAULT'                       => array(2, 'var'),
+        'DEFAULT'                       => array(2, 'expr', array('breakOnAlias' => true)),
         'AUTO_INCREMENT'                => 3,
         'PRIMARY'                       => 4,
         'PRIMARY KEY'                   => 4,
@@ -55,7 +55,7 @@ class CreateDefinition extends Component
 
         // Generated columns options.
         'GENERATED ALWAYS'              => 8,
-        'AS'                            => array(9, 'expr', array('bracketsDelimited' => true)),
+        'AS'                            => array(9, 'expr', array('parenthesesDelimited' => true)),
         'VIRTUAL'                       => 10,
         'PERSISTENT'                    => 11,
         'STORED'                        => 11,
@@ -215,11 +215,17 @@ class CreateDefinition extends Component
                 } elseif (($token->type === Token::TYPE_KEYWORD) && ($token->flags & Token::FLAG_KEYWORD_KEY)) {
                     $expr->key = Key::parse($parser, $list);
                     $state = 4;
-                } else {
+                } elseif ($token->type === Token::TYPE_SYMBOL || $token->type === Token::TYPE_NONE) {
                     $expr->name = $token->value;
                     if (!$expr->isConstraint) {
                         $state = 2;
                     }
+                } else {
+                    $parser->error(
+                        __('A symbol name was expected!'),
+                        $token
+                    );
+                    return $ret;
                 }
             } elseif ($state === 2) {
                 $expr->type = DataType::parse($parser, $list);

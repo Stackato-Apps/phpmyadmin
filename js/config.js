@@ -4,6 +4,30 @@
  */
 
 /**
+ * checks whether browser supports web storage
+ *
+ * @param type the type of storage i.e. localStorage or sessionStorage
+ *
+ * @returns bool
+ */
+function isStorageSupported(type)
+{
+    try {
+        window[type].setItem('PMATest', 'test');
+        // Check whether key-value pair was set successfully
+        if (window[type].getItem('PMATest') === 'test') {
+            // Supported, remove test variable from storage
+            window[type].removeItem('PMATest');
+            return true;
+        }
+    } catch(error) {
+        // Not supported
+        PMA_ajaxShowMessage(PMA_messages.strNoLocalStorage, false);
+    }
+    return false;
+}
+
+/**
  * Unbind all event handlers before tearing down a page
  */
 AJAX.registerTeardown('config.js', function () {
@@ -600,8 +624,12 @@ AJAX.registerOnload('config.js', function () {
     var tab_check_fnc = function () {
         if (location.hash != prev_hash) {
             prev_hash = location.hash;
-            if (location.hash.match(/^#tab_.+/) && $('#' + location.hash.substr(5)).length) {
-                setTab(location.hash.substr(5));
+            if (location.hash.match(/^#tab_[a-zA-Z0-9_]+/)) {
+                // session ID is sometimes appended here
+                var hash = location.hash.substr(5).split('&')[0];
+                if ($('#' + hash).length) {
+                    setTab(hash);
+                }
             }
         }
     };
@@ -711,7 +739,7 @@ AJAX.registerOnload('config.js', function () {
         });
 
     // detect localStorage state
-    var ls_supported = window.localStorage || false;
+    var ls_supported = isStorageSupported('localStorage');
     var ls_exists = ls_supported ? (window.localStorage.config || false) : false;
     $('div.localStorage-' + (ls_supported ? 'un' : '') + 'supported').hide();
     $('div.localStorage-' + (ls_exists ? 'empty' : 'exists')).hide();
@@ -811,7 +839,7 @@ function updatePrefsDate()
  */
 function offerPrefsAutoimport()
 {
-    var has_config = (window.localStorage || false) && (window.localStorage.config || false);
+    var has_config = (isStorageSupported('localStorage')) && (window.localStorage.config || false);
     var $cnt = $('#prefs_autoload');
     if (!$cnt.length || !has_config) {
         return;

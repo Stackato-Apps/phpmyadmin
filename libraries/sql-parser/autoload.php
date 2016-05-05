@@ -14,6 +14,9 @@
 namespace SqlParser\Autoload;
 
 if (!class_exists('SqlParser\\Autoload\\ClassLoader')) {
+    if (! file_exists('./libraries/sql-parser/ClassLoader.php')) {
+        die('Invalid invocation');
+    }
     include_once './libraries/sql-parser/ClassLoader.php';
 }
 
@@ -59,6 +62,13 @@ class AutoloaderInit
         return $loader;
     }
 }
+
+// php-gettext is used to translate error messages.
+// This must be included before any class of the parser is loaded because
+// if there is no `__` function defined, the library defines a dummy one
+// in `common.php`.
+require_once './libraries/vendor_config.php';
+require_once GETTEXT_INC;
 
 // Initializing the autoloader.
 return AutoloaderInit::getLoader(

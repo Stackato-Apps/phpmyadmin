@@ -5,14 +5,13 @@
  *
  * @package PhpMyAdmin-Setup
  */
+use PMA\libraries\config\FormDisplay;
+use PMA\setup\lib\ConfigGenerator;
 
 /**
  * Core libraries.
  */
 require './lib/common.inc.php';
-require_once './libraries/config/Form.class.php';
-require_once './libraries/config/FormDisplay.class.php';
-require_once './setup/lib/ConfigGenerator.class.php';
 
 require './libraries/config/setup.forms.php';
 
@@ -57,7 +56,7 @@ if (PMA_ifSetOr($_POST['submit_clear'], '')) {
     // Load config file from the server
     //
     $cfg = array();
-    include_once $config_file_path;
+    include $config_file_path;
     $GLOBALS['ConfigFile']->setConfigData($cfg);
     header('HTTP/1.1 303 See Other');
     header('Location: index.php' . PMA_URL_getCommon());

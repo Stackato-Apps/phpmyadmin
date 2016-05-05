@@ -9,9 +9,10 @@
 /*
  * Needed for backquote() and PMA_RTN_getQueryFromRequest()
  */
-require_once 'libraries/Util.class.php';
-require_once 'libraries/php-gettext/gettext.inc';
-require_once './libraries/Types.class.php';
+
+use PMA\libraries\TypesMySQL;
+
+
 
 /*
  * Include to test.
@@ -42,7 +43,7 @@ class PMA_RTN_GetQueryFromRequest_Test extends PHPUnit_Framework_TestCase
 
         $cfg['ShowFunctionFields'] = false;
 
-        $GLOBALS['PMA_Types'] = new PMA_Types_MySQL();
+        $GLOBALS['PMA_Types'] = new TypesMySQL();
 
         $errors = array();
         PMA_RTN_setGlobals();
@@ -138,7 +139,7 @@ class PMA_RTN_GetQueryFromRequest_Test extends PHPUnit_Framework_TestCase
                     'item_sqldataaccess'        => 'READ SQL DATA'
                 ),
                 'CREATE FUNCTION `func\\`(`pa``ram` VARCHAR(45) CHARSET latin1) '
-                . 'RETURNS DECIMAL(5,5) UNSIGNED ZEROFILL COMMENT \'foo\'\'s bar\' '
+                . 'RETURNS DECIMAL(5,5) UNSIGNED ZEROFILL COMMENT \'foo\\\'s bar\' '
                 . 'DETERMINISTIC SQL SECURITY DEFINER SELECT \'foobar\';',
                 0
             ),

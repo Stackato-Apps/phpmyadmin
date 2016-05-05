@@ -80,7 +80,7 @@ class Formatter
                  *
                  * @var string
                  */
-                'indentation' => "  ",
+                'indentation' => '  ',
 
                 /**
                  * Whether comments should be removed or not.
@@ -122,49 +122,49 @@ class Formatter
                         'type'      => Token::TYPE_KEYWORD,
                         'flags'     => Token::FLAG_KEYWORD_RESERVED,
                         'html'      => 'class="sql-reserved"',
-                        'cli'      => "\e[35m",
+                        'cli'       => "\e[35m",
                         'function'  => 'strtoupper',
                     ),
                     array(
                         'type'      => Token::TYPE_KEYWORD,
                         'flags'     => 0,
                         'html'      => 'class="sql-keyword"',
-                        'cli'      => "\e[95m",
+                        'cli'       => "\e[95m",
                         'function'  => 'strtoupper',
                     ),
                     array(
                         'type'      => Token::TYPE_COMMENT,
                         'flags'     => 0,
                         'html'      => 'class="sql-comment"',
-                        'cli'      => "\e[37m",
+                        'cli'       => "\e[37m",
                         'function'  => '',
                     ),
                     array(
                         'type'      => Token::TYPE_BOOL,
                         'flags'     => 0,
                         'html'      => 'class="sql-atom"',
-                        'cli'      => "\e[36m",
+                        'cli'       => "\e[36m",
                         'function'  => 'strtoupper',
                     ),
                     array(
                         'type'      => Token::TYPE_NUMBER,
                         'flags'     => 0,
                         'html'      => 'class="sql-number"',
-                        'cli'      => "\e[92m",
+                        'cli'       => "\e[92m",
                         'function'  => 'strtolower',
                     ),
                     array(
                         'type'      => Token::TYPE_STRING,
                         'flags'     => 0,
                         'html'      => 'class="sql-string"',
-                        'cli'      => "\e[91m",
+                        'cli'       => "\e[91m",
                         'function'  => '',
                     ),
                     array(
                         'type'      => Token::TYPE_SYMBOL,
                         'flags'     => 0,
                         'html'      => 'class="sql-variable"',
-                        'cli'      => "\e[36m",
+                        'cli'       => "\e[36m",
                         'function'  => '',
                     ),
                 )
@@ -206,6 +206,13 @@ class Formatter
          * @var bool $lineEnded
          */
         $lineEnded = false;
+
+        /**
+         * Whether current group is short (no linebreaks)
+         *
+         * @var bool $shortGroup
+         */
+        $shortGroup = false;
 
         /**
          * The name of the last clause.
@@ -304,7 +311,9 @@ class Formatter
                 if (($this->options['parts_newline'])
                     && (!$formattedOptions)
                     && (empty(self::$INLINE_CLAUSES[$lastClause]))
-                    && ($curr->type != Token::TYPE_KEYWORD)
+                    && (($curr->type !== Token::TYPE_KEYWORD)
+                    || (($curr->type === Token::TYPE_KEYWORD)
+                    && ($curr->flags & Token::FLAG_KEYWORD_FUNCTION)))
                 ) {
                     $formattedOptions = true;
                     $lineEnded = true;
@@ -334,9 +343,10 @@ class Formatter
                 // Formatting fragments delimited by comma.
                 if (($prev->type === Token::TYPE_OPERATOR) && ($prev->value === ',')) {
                     // Fragments delimited by a comma are broken into multiple
-                    // pieces only if the clause if the clause is not inlined or
-                    // this fragment is between brackets that were on new line.
+                    // pieces only if the clause is not inlined or this fragment
+                    // is between brackets that are on new line.
                     if (((empty(self::$INLINE_CLAUSES[$lastClause]))
+                        && ! $shortGroup
                         && ($this->options['parts_newline']))
                         || (end($blocksLineEndings) === true)
                     ) {
@@ -349,14 +359,17 @@ class Formatter
                 // them is longer than 30 characters.
                 if (($prev->type === Token::TYPE_OPERATOR) && ($prev->value === '(')) {
                     array_push($blocksIndentation, $indent);
+                    $shortGroup = true;
                     if (static::getGroupLength($list) > 30) {
                         ++$indent;
                         $lineEnded = true;
+                        $shortGroup = false;
                     }
                     array_push($blocksLineEndings, $lineEnded);
                 } elseif (($curr->type === Token::TYPE_OPERATOR) && ($curr->value === ')')) {
                     $indent = array_pop($blocksIndentation);
                     $lineEnded |= array_pop($blocksLineEndings);
+                    $shortGroup = false;
                 }
 
                 // Delimiter must be placed on the same line with the last
@@ -385,7 +398,8 @@ class Formatter
                     // Also, some tokens do not have spaces before or after them.
                     if (!((($prev->type === Token::TYPE_OPERATOR) && (($prev->value === '.') || ($prev->value === '(')))
                         // No space after . (
-                        || (($curr->type === Token::TYPE_OPERATOR) && (($curr->value === '.') || ($curr->value === ',') || ($curr->value === '(') || ($curr->value === ')')))
+                        || (($curr->type === Token::TYPE_OPERATOR) && (($curr->value === '.') || ($curr->value === ',')
+                        || ($curr->value === '(') || ($curr->value === ')')))
                         // No space before . , ( )
                         || (($curr->type === Token::TYPE_DELIMITER)) && (mb_strlen($curr->value, 'UTF-8') < 2))
                         // A space after delimiters that are longer than 2 characters.
@@ -401,9 +415,12 @@ class Formatter
                 $comment = '';
             }
 
-            // Saving the next token as the one that will be processed during
-            // the next iteration.
+            // Iteration finished, consider current token as previous.
             $prev = $curr;
+        }
+
+        if ($this->options['type'] === 'cli') {
+            return $ret . "\e[0m";
         }
 
         return $ret;
